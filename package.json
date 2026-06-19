@@ -1,0 +1,17 @@
+{
+  "name": "codequesthub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CodeQuestHub — CodeQuest 2026 all-in-one platform (KNUST Group 129)",
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "dev:auth": "npm run dev --workspace=auth-service",
+    "dev:group": "npm run dev --workspace=group-service",
+    "build:shared": "npm run build --workspace=@codequesthub/shared",
+    "build:all": "npm run build:shared && npm run build --workspaces --if-present",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  }
+}

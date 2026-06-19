@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+npm-debug.log*
+
+# Expo / React Native
+mobile/.expo/
+mobile/.expo-shared/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
