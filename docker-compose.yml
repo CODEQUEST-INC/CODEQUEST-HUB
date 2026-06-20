@@ -1,34 +1,13 @@
 
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: codequest
-      POSTGRES_PASSWORD: codequest_dev_pw
-      POSTGRES_DB: codequesthub
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U codequest"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   auth-service:
     build:
       context: .
       dockerfile: services/auth-service/Dockerfile
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://codequest:codequest_dev_pw@postgres:5432/codequesthub
+      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me}
       PORT: 4001
     ports:
@@ -39,11 +18,8 @@ services:
       context: .
       dockerfile: services/group-service/Dockerfile
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://codequest:codequest_dev_pw@postgres:5432/codequesthub
+      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me}
       PORT: 4002
     ports:
@@ -54,11 +30,8 @@ services:
       context: .
       dockerfile: services/project-service/Dockerfile
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://codequest:codequest_dev_pw@postgres:5432/codequesthub
+      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me}
       PORT: 4003
     ports:
@@ -75,7 +48,4 @@ services:
   #     - "8080:8080"
 
   # task-service, judging-service, showcase-service:
-  # add the same pattern as auth-service / group-service once each is built (Phase 2/3).
-
-volumes:
-  pgdata:
+  # add the same pattern as above once each is built (Phase 3/4).
