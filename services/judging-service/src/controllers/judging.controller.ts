@@ -40,6 +40,28 @@ export async function createCriteria(req: Request, res: Response) {
 }
 
 // ============================================================
+// GET /api/judging/criteria  — list all criteria, optionally by cohort
+// ============================================================
+export async function getCriteria(req: Request, res: Response) {
+  const { cohortId } = req.query;
+
+  // cohortId is an optional filter — validate it only when provided.
+  if (cohortId !== undefined && !z.string().uuid().safeParse(cohortId).success) {
+    return res.status(400).json({ error: 'validation_error', message: 'cohortId must be a valid UUID' });
+  }
+
+  const baseSelect =
+    `SELECT id, cohort_id AS "cohortId", name, weight, max_score AS "maxScore", created_at AS "createdAt"
+     FROM judging_criteria`;
+
+  const criteria = cohortId
+    ? await query(`${baseSelect} WHERE cohort_id = $1 ORDER BY created_at ASC`, [cohortId])
+    : await query(`${baseSelect} ORDER BY created_at ASC`);
+
+  return res.json({ data: criteria });
+}
+
+// ============================================================
 // POST /api/judging/scorecards  — judge submits a score per group + criterion
 // Upserts on (group_id, judge_id, criteria_id) so a resubmission updates.
 // ============================================================
