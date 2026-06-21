@@ -64,6 +64,21 @@ services:
     ports:
       - "4003:4003"
 
+  judging-service:
+    build:
+      context: .
+      dockerfile: services/judging-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://codequest:codequest_dev_pw@postgres:5432/codequesthub
+      JWT_SECRET: ${JWT_SECRET:-dev_only_change_me}
+      PORT: 4004
+    ports:
+      - "4004:4004"
+
   # gateway:
   #   build:
   #     context: .
@@ -74,7 +89,7 @@ services:
   #   ports:
   #     - "8080:8080"
 
-  # task-service, judging-service, showcase-service:
+  # task-service, showcase-service:
   # add the same pattern as auth-service / group-service once each is built (Phase 2/3).
 
 volumes:
