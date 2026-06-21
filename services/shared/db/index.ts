@@ -9,6 +9,11 @@ const config: PoolConfig = {
   max: 10,                       // max connections per service instance
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
+  // Required for Neon (and any TLS Postgres host). Safe to keep on for local
+  // Docker Postgres too since it just becomes a no-op when SSL isn't offered.
+  ssl: process.env.DATABASE_URL?.includes('sslmode=require')
+    ? { rejectUnauthorized: false }
+    : false,
 };
 
 export const pool = new Pool(config);
