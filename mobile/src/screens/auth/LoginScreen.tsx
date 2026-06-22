@@ -85,6 +85,16 @@ export default function LoginScreen({ navigation }: any) {
             <Text className="text-white font-bold text-lg">Sign In</Text>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          className="w-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-4 items-center mt-3 shadow-sm"
+          onPress={() => {
+            // Bypass auth for testing Phase 2 UI
+            login('dummy-token', { id: 'test-user', email: 'tester@knust.edu.gh', role: 'student' });
+          }}
+        >
+          <Text className="text-slate-700 dark:text-slate-300 font-bold text-base">Test UI (Skip Login)</Text>
+        </TouchableOpacity>
         
         <View className="flex-row justify-center mt-4">
           <Text className="text-slate-500 dark:text-slate-400">Don't have an account? </Text>

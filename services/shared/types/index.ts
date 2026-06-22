@@ -52,7 +52,8 @@ export type ProposalStatus =
   | 'under_review'
   | 'approved'
   | 'rejected'
-  | 'changes_requested';
+  | 'changes_requested'
+  | 'forwarded_to_admin';
 
 export interface Proposal {
   id: string;
@@ -61,6 +62,8 @@ export interface Proposal {
   problemStatement: string;
   objectives: string;
   techStack: string;
+  documentUrl?: string | null;
+  documentName?: string | null;
   status: ProposalStatus;
   currentVersion: number;
   submittedBy: string;
@@ -77,6 +80,8 @@ export interface ProposalVersion {
   problemStatement: string;
   objectives: string;
   techStack: string;
+  documentUrl?: string | null;
+  documentName?: string | null;
   action: string;
   actorId: string;
   feedback?: string | null;
