@@ -20,10 +20,14 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   useEffect(() => {
     // Fade in and scale up the logo
     opacity.value = withTiming(1, { duration: 800 });
-    scale.value = withTiming(1, { duration: 800 }, () => {
-      // Hold for 1.5 seconds, then call onFinish
-      runOnJS(setTimeout)(onFinish, 1500);
-    });
+    scale.value = withTiming(1, { duration: 800 });
+    
+    // Hold for 1.5 seconds after animation, then call onFinish
+    const timer = setTimeout(() => {
+      onFinish();
+    }, 2300);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -34,7 +38,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   });
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900 justify-center items-center">
+    <View className="flex-1 bg-white justify-center items-center">
       <Animated.View style={animatedStyle} className="items-center">
         <Image 
           source={require('../../assets/logo.png')} 

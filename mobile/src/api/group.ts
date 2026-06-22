@@ -1,19 +1,13 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const getBaseUrl = (port: number) => {
-  if (Platform.OS === 'android') {
-    return `http://10.0.2.2:${port}`; // Android Emulator
-  }
-  return `http://localhost:${port}`; // iOS Simulator
-};
+// Hardcoded IP for Expo Go on physical device
+const API_URL = 'http://172.20.10.14:4002/api/groups';
 
 const groupApi = axios.create({
-  baseURL: `${getBaseUrl(4002)}/api/group`,
+  baseURL: API_URL,
 });
 
-// Interceptor to add JWT token to every request
 groupApi.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem('jwt_token');
   if (token) {
