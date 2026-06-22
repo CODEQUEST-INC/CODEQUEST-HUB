@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView } from 'rea
 import { useAuth } from '../../context/AuthContext';
 import groupApi from '../../api/group';
 
-export default function DashboardScreen() {
+export default function DashboardScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const [group, setGroup] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +91,31 @@ export default function DashboardScreen() {
             </Text>
           </View>
         )}
+      <View className="px-6 pb-12 mt-2">
+        <Text className="text-slate-800 dark:text-white text-xl font-bold mb-4">Phase 2 Testing (Projects)</Text>
+        
+        <View className="space-y-3">
+          <TouchableOpacity 
+            className="w-full bg-brand-purple rounded-xl p-4 items-center flex-row justify-center shadow-sm"
+            onPress={() => navigation.navigate('ProposalStatus')}
+          >
+            <Text className="text-white font-bold text-base">Student: View/Submit Proposal</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            className="w-full bg-blue-500 rounded-xl p-4 items-center flex-row justify-center shadow-sm"
+            onPress={() => navigation.navigate('SupervisorReview')}
+          >
+            <Text className="text-white font-bold text-base">Lecturer: Review Proposal</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            className="w-full bg-slate-800 dark:bg-slate-700 rounded-xl p-4 items-center flex-row justify-center shadow-sm"
+            onPress={() => navigation.navigate('AdminDashboard')}
+          >
+            <Text className="text-white font-bold text-base">Admin: Final Approvals</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );

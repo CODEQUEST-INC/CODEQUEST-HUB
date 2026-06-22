@@ -9,6 +9,12 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import DashboardScreen from '../screens/main/DashboardScreen';
 import SplashScreen from '../screens/SplashScreen';
 
+// Phase 2 Screens
+import ProposalSubmissionScreen from '../screens/projects/ProposalSubmissionScreen';
+import ProposalStatusDashboard from '../screens/projects/ProposalStatusDashboard';
+import SupervisorReviewScreen from '../screens/projects/SupervisorReviewScreen';
+import AdminDashboard from '../screens/projects/AdminDashboard';
+
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -26,7 +32,13 @@ export default function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           // Authenticated Stack
-          <Stack.Screen name="Dashboard" component={DashboardScreen} />
+          <>
+            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="SubmitProposal" component={ProposalSubmissionScreen} />
+            <Stack.Screen name="ProposalStatus" component={ProposalStatusDashboard} />
+            <Stack.Screen name="SupervisorReview" component={SupervisorReviewScreen} />
+            <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+          </>
         ) : (
           // Unauthenticated Stack
           <>
