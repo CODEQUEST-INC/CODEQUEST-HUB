@@ -1,0 +1,52 @@
+services:
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
+    ports:
+      - "8081:8081"
+
+  group-service:
+    build:
+      context: ./group-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
+    ports:
+      - "8082:8082"
+
+  project-service:
+    build:
+      context: ./project-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:afwkdnQRmbxTf2ycaLuVU1AzsLMZOObMnbWKelLNuZI3Izr6wyShyzrxI7iMcHDL}
+    ports:
+      - "8083:8083"
+
+  task-service:
+    build:
+      context: ./task-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
+    ports:
+      - "8084:8084"
