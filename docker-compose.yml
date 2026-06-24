@@ -1,4 +1,24 @@
 services:
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8081
+      GROUP_SERVICE_URL: http://group-service:8082
+      PROJECT_SERVICE_URL: http://project-service:8083
+      TASK_SERVICE_URL: http://task-service:8084
+      JUDGING_SERVICE_URL: http://judging-service:8085
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - group-service
+      - project-service
+      - task-service
+      - judging-service
+
   auth-service:
     build:
       context: ./auth-service
@@ -34,7 +54,7 @@ services:
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:afwkdnQRmbxTf2ycaLuVU1AzsLMZOObMnbWKelLNuZI3Izr6wyShyzrxI7iMcHDL}
+      JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
     ports:
       - "8083:8083"
 
@@ -50,3 +70,16 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
     ports:
       - "8084:8084"
+
+  judging-service:
+    build:
+      context: ./judging-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
+    ports:
+      - "8085:8085"

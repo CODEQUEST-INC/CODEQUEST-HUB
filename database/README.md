@@ -35,7 +35,8 @@ You have two options:
 - `03_init_proposals.sql` — proposals, proposal_versions
 - `04_add_group_leader.sql` — adds `groups.group_leader_id`, used by task-service to gate task management to the group leader
 - `05_init_tasks.sql` — tasks table + task_status enum
+- `06_init_judging.sql` — judging_criteria, judges (per-cohort assignment), scorecards, scorecard_scores
 
-As Judging and Showcase services are added, continue adding new numbered
+As Showcase service is added, continue adding new numbered
 files here rather than editing the existing ones, so the history of schema
 changes stays readable.
