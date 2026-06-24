@@ -20,20 +20,20 @@ export async function getCommunityPosts(req: Request, res: Response) {
   if (category) {
     posts = await query<Post>(
       `SELECT cp.id, cp.author_id AS "authorId", u.full_name AS "authorName", 
-              cp.title, cp.content, cp.category, cp.link_url AS "linkUrl", cp.created_at AS "createdAt"
+              cp.title, cp.content, cp.category, cp.link_url AS "linkUrl", cp.is_promoted AS "isPromoted", cp.created_at AS "createdAt"
        FROM community_posts cp
        JOIN users u ON cp.author_id = u.id
        WHERE cp.category = $1
-       ORDER BY cp.created_at DESC`,
+       ORDER BY cp.is_promoted DESC, cp.created_at DESC`,
       [category]
     );
   } else {
     posts = await query<Post>(
       `SELECT cp.id, cp.author_id AS "authorId", u.full_name AS "authorName", 
-              cp.title, cp.content, cp.category, cp.link_url AS "linkUrl", cp.created_at AS "createdAt"
+              cp.title, cp.content, cp.category, cp.link_url AS "linkUrl", cp.is_promoted AS "isPromoted", cp.created_at AS "createdAt"
        FROM community_posts cp
        JOIN users u ON cp.author_id = u.id
-       ORDER BY cp.created_at DESC`
+       ORDER BY cp.is_promoted DESC, cp.created_at DESC`
     );
   }
 

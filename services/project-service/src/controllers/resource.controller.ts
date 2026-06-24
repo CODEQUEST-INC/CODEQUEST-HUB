@@ -8,7 +8,9 @@ const createResourceSchema = z.object({
   resourceType: z.enum(['hall_of_fame', 'material']),
   linkUrl: z.string().url().optional().nullable(),
   thumbnailUrl: z.string().url().optional().nullable(),
-  cohortId: z.string().uuid().optional().nullable()
+  cohortId: z.string().uuid().optional().nullable(),
+  isPremium: z.boolean().optional(),
+  price: z.number().min(0).optional().nullable()
 });
 
 // ============================================================
@@ -22,7 +24,8 @@ export async function getResources(req: Request, res: Response) {
   if (type) {
     resources = await query<Resource>(
       `SELECT id, title, description, resource_type AS "resourceType", link_url AS "linkUrl", 
-              thumbnail_url AS "thumbnailUrl", cohort_id AS "cohortId", uploaded_by AS "uploadedBy", created_at AS "createdAt"
+              thumbnail_url AS "thumbnailUrl", cohort_id AS "cohortId", uploaded_by AS "uploadedBy", 
+              is_premium AS "isPremium", price, created_at AS "createdAt"
        FROM resources
        WHERE resource_type = $1
        ORDER BY created_at DESC`,
@@ -31,7 +34,8 @@ export async function getResources(req: Request, res: Response) {
   } else {
     resources = await query<Resource>(
       `SELECT id, title, description, resource_type AS "resourceType", link_url AS "linkUrl", 
-              thumbnail_url AS "thumbnailUrl", cohort_id AS "cohortId", uploaded_by AS "uploadedBy", created_at AS "createdAt"
+              thumbnail_url AS "thumbnailUrl", cohort_id AS "cohortId", uploaded_by AS "uploadedBy", 
+              is_premium AS "isPremium", price, created_at AS "createdAt"
        FROM resources
        ORDER BY created_at DESC`
     );
@@ -48,15 +52,16 @@ export async function createResource(req: Request, res: Response) {
   if (!parsed.success) return res.status(400).json({ error: 'validation_error', message: 'Invalid input', details: parsed.error.flatten() });
 
   const userId = req.user!.id;
-  const { title, description, resourceType, linkUrl, thumbnailUrl, cohortId } = parsed.data;
+  const { title, description, resourceType, linkUrl, thumbnailUrl, cohortId, isPremium, price } = parsed.data;
 
   // Ideally only admins or supervisors can upload resources, but we allow it for the MVP demo
   const newResource = await queryOne<Resource>(
-    `INSERT INTO resources (title, description, resource_type, link_url, thumbnail_url, cohort_id, uploaded_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO resources (title, description, resource_type, link_url, thumbnail_url, cohort_id, uploaded_by, is_premium, price)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING id, title, description, resource_type AS "resourceType", link_url AS "linkUrl", 
-               thumbnail_url AS "thumbnailUrl", cohort_id AS "cohortId", uploaded_by AS "uploadedBy", created_at AS "createdAt"`,
-    [title, description, resourceType, linkUrl || null, thumbnailUrl || null, cohortId || null, userId]
+               thumbnail_url AS "thumbnailUrl", cohort_id AS "cohortId", uploaded_by AS "uploadedBy", 
+               is_premium AS "isPremium", price, created_at AS "createdAt"`,
+    [title, description, resourceType, linkUrl || null, thumbnailUrl || null, cohortId || null, userId, isPremium || false, price || null]
   );
 
   return res.status(201).json({ data: newResource });

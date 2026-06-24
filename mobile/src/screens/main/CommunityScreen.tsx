@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import communityApi from '../../api/community';
 
@@ -10,6 +10,7 @@ interface Post {
   content: string;
   category: 'discussion' | 'tutorial' | 'help' | 'announcement';
   linkUrl?: string;
+  isPromoted?: boolean;
   createdAt: string;
 }
 
@@ -103,19 +104,26 @@ export default function CommunityScreen() {
           keyExtractor={item => item.id}
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
           renderItem={({ item }) => (
-            <View className="bg-white dark:bg-slate-800 p-5 rounded-2xl mb-4 shadow-sm border border-slate-100 dark:border-slate-700">
-              <View className="flex-row justify-between items-start mb-2">
-                <View>
-                  <Text className="text-lg font-bold text-slate-900 dark:text-white">{item.title}</Text>
-                  <Text className="text-sm text-slate-500 dark:text-slate-400 mt-1">By {item.authorName}</Text>
+              <View className={`bg-white dark:bg-slate-800 p-5 rounded-2xl mb-4 shadow-sm border ${item.isPromoted ? 'border-brand-orange bg-brand-orange/5 dark:bg-brand-orange/10' : 'border-slate-100 dark:border-slate-700'}`}>
+                {item.isPromoted && (
+                  <View className="flex-row items-center mb-2">
+                    <Text className="text-brand-orange text-xs font-bold uppercase tracking-wider">🌟 Promoted</Text>
+                  </View>
+                )}
+                <View className="flex-row justify-between items-start mb-2">
+                  <View>
+                    <Text className="text-lg font-bold text-slate-900 dark:text-white">{item.title}</Text>
+                    <Text className="text-sm text-slate-500 dark:text-slate-400 mt-1">By {item.authorName}</Text>
+                  </View>
+                  <View className={`px-2 py-1 rounded-md ${getCategoryColor(item.category).split(' ')[0]}`}>
+                    <Text className={`text-xs font-bold capitalize ${getCategoryColor(item.category).split(' ')[1]}`}>{item.category}</Text>
+                  </View>
                 </View>
-                <View className={`px-2 py-1 rounded-md ${getCategoryColor(item.category).split(' ')[0]}`}>
-                  <Text className={`text-xs font-bold capitalize ${getCategoryColor(item.category).split(' ')[1]}`}>{item.category}</Text>
-                </View>
-              </View>
               <Text className="text-slate-700 dark:text-slate-300 my-3 leading-6">{item.content}</Text>
               {item.linkUrl && (
-                <Text className="text-blue-500 underline mt-2">{item.linkUrl}</Text>
+                <TouchableOpacity onPress={() => Linking.openURL(item.linkUrl!)}>
+                  <Text className="text-blue-500 font-bold mt-2">External Link →</Text>
+                </TouchableOpacity>
               )}
             </View>
           )}

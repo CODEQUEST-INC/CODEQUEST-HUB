@@ -8,6 +8,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import DashboardScreen from '../screens/main/DashboardScreen';
 import SplashScreen from '../screens/SplashScreen';
+import CreateProfileScreen from '../screens/auth/CreateProfileScreen';
 
 // Phase 2 Screens
 import ProposalSubmissionScreen from '../screens/projects/ProposalSubmissionScreen';
@@ -25,6 +26,7 @@ import ResourcesScreen from '../screens/main/ResourcesScreen';
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  CreateProfile: undefined;
   Dashboard: undefined;
   SubmitProposal: undefined;
   ProposalStatus: undefined;
@@ -51,17 +53,24 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
-          // Authenticated Stack
-          <>
-            <Stack.Screen name="Dashboard" component={DashboardScreen} />
-            <Stack.Screen name="SubmitProposal" component={ProposalSubmissionScreen} />
-            <Stack.Screen name="ProposalStatus" component={ProposalStatusDashboard} />
-            <Stack.Screen name="SupervisorReview" component={SupervisorReviewScreen} />
-            <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-            <Stack.Screen name="KanbanBoard" component={KanbanBoardScreen} />
-            <Stack.Screen name="Community" component={CommunityScreen} />
-            <Stack.Screen name="Resources" component={ResourcesScreen} />
-          </>
+          user.profileCompleted ? (
+            // Authenticated Stack
+            <>
+              <Stack.Screen name="Dashboard" component={DashboardScreen} />
+              <Stack.Screen name="SubmitProposal" component={ProposalSubmissionScreen} />
+              <Stack.Screen name="ProposalStatus" component={ProposalStatusDashboard} />
+              <Stack.Screen name="SupervisorReview" component={SupervisorReviewScreen} />
+              <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+              <Stack.Screen name="KanbanBoard" component={KanbanBoardScreen} />
+              <Stack.Screen name="Community" component={CommunityScreen} />
+              <Stack.Screen name="Resources" component={ResourcesScreen} />
+            </>
+          ) : (
+            // Incomplete Profile Trap
+            <>
+              <Stack.Screen name="CreateProfile" component={CreateProfileScreen} />
+            </>
+          )
         ) : (
           // Unauthenticated Stack
           <>

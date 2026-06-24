@@ -6,12 +6,14 @@ type User = {
   id: string;
   email: string;
   role: string;
+  profileCompleted?: boolean;
 };
 
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   login: (token: string, userData: User) => Promise<void>;
+  updateUser: (userData: User) => void;
   logout: () => Promise<void>;
 };
 
@@ -28,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (token) {
           // Verify token and get user data
           const response = await authApi.get('/me');
-          setUser(response.data.data.user);
+          setUser({ ...response.data.data, profileCompleted: response.data.data.profileCompleted ?? false });
         }
       } catch (e) {
         console.error('Failed to restore token', e);
@@ -47,13 +49,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(userData);
   };
 
+  const updateUser = (userData: User) => {
+    setUser(userData);
+  };
+
   const logout = async () => {
     await AsyncStorage.removeItem('jwt_token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

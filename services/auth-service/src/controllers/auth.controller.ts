@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { query, queryOne, signToken, User } from '@codequesthub/shared';
+import { query, queryOne, signToken, User, UserRole } from '@codequesthub/shared';
 
 const SALT_ROUNDS = 10;
 
@@ -48,7 +48,7 @@ export async function register(req: Request, res: Response) {
   );
 
   const user = rows[0];
-  const token = signToken({ id: user.id, email: user.email, role: user.role });
+  const token = signToken({ id: user.id, email: user.email, role: user.role, profileCompleted: user.profileCompleted });
 
   return res.status(201).json({ data: { user, token } });
 }
@@ -64,8 +64,8 @@ export async function login(req: Request, res: Response) {
 
   const { email, password } = parsed.data;
 
-  const row = await queryOne<{ id: string; password_hash: string; role: string; full_name: string; email: string }>(
-    'SELECT id, password_hash, role, full_name, email FROM users WHERE email = $1',
+  const row = await queryOne<{ id: string; password_hash: string; role: string; full_name: string; email: string; profile_completed: boolean }>(
+    'SELECT id, password_hash, role, full_name, email, profile_completed FROM users WHERE email = $1',
     [email]
   );
 
@@ -78,11 +78,11 @@ export async function login(req: Request, res: Response) {
   const matches = await bcrypt.compare(password, row.password_hash);
   if (!matches) return invalidCredentials();
 
-  const token = signToken({ id: row.id, email: row.email, role: row.role as any });
+  const token = signToken({ id: row.id, email: row.email, role: row.role as any, profileCompleted: row.profile_completed });
 
   return res.json({
     data: {
-      user: { id: row.id, fullName: row.full_name, email: row.email, role: row.role },
+      user: { id: row.id, fullName: row.full_name, email: row.email, role: row.role, profileCompleted: row.profile_completed },
       token,
     },
   });
@@ -103,4 +103,57 @@ export async function me(req: Request, res: Response) {
   }
 
   return res.json({ data: user });
+}
+
+// ============================================================
+// PATCH /api/auth/profile
+// ============================================================
+const updateProfileSchema = z.object({
+  role: z.enum(['student', 'supervisor', 'alumni', 'senior', 'admin', 'mentor']),
+  avatarUrl: z.string().url().optional().nullable(),
+  bio: z.string().optional().nullable(),
+  socialLinks: z.record(z.string()).optional(),
+  skills: z.array(z.string()).optional(),
+  mentorshipStatus: z.boolean().optional(),
+  subaccountId: z.string().optional().nullable(),
+});
+
+export async function updateProfile(req: Request, res: Response) {
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'validation_error', message: 'Invalid input', details: parsed.error.flatten() });
+  }
+
+  const { role, avatarUrl, bio, socialLinks, skills, mentorshipStatus, subaccountId } = parsed.data;
+
+  const rows = await query<User>(
+    `UPDATE users 
+     SET role = $1, 
+         avatar_url = $2, 
+         bio = $3, 
+         social_links = $4, 
+         skills = $5, 
+         mentorship_status = $6, 
+         subaccount_id = $7,
+         profile_completed = true
+     WHERE id = $8
+     RETURNING id, full_name AS "fullName", email, role, profile_completed AS "profileCompleted", 
+               avatar_url AS "avatarUrl", bio, social_links AS "socialLinks", skills, 
+               mentorship_status AS "mentorshipStatus", subaccount_id AS "subaccountId"`,
+    [
+      role, 
+      avatarUrl || null, 
+      bio || null, 
+      socialLinks || {}, 
+      skills || [], 
+      mentorshipStatus || false, 
+      subaccountId || null, 
+      req.user!.id
+    ]
+  );
+
+  const updatedUser = rows[0];
+  const token = signToken({ id: updatedUser.id, email: updatedUser.email, role: updatedUser.role, profileCompleted: updatedUser.profileCompleted });
+
+  return res.json({ data: { user: updatedUser, token } });
 }

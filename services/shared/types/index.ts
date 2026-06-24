@@ -2,12 +2,13 @@
 // Import via relative path until this is published as an internal package,
 // e.g. import { UserRole } from '../../shared/types';
 
-export type UserRole = 'student' | 'supervisor' | 'admin' | 'mentor';
+export type UserRole = 'student' | 'supervisor' | 'admin' | 'mentor' | 'alumni' | 'senior';
 
 export interface AuthenticatedUser {
   id: string;
   email: string;
   role: UserRole;
+  profileCompleted?: boolean;
 }
 
 // Augments Express's Request type so req.user is typed after the auth middleware runs.
@@ -26,6 +27,13 @@ export interface User {
   role: UserRole;
   studentId?: string | null;
   indexNumber?: string | null;
+  profileCompleted: boolean;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  socialLinks?: Record<string, string>;
+  skills?: string[];
+  mentorshipStatus?: boolean;
+  subaccountId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -139,6 +147,7 @@ export interface Post {
   content: string;
   category: PostCategory;
   linkUrl?: string | null;
+  isPromoted?: boolean;
   createdAt: string;
 }
 
@@ -153,5 +162,7 @@ export interface Resource {
   thumbnailUrl?: string | null;
   cohortId?: string | null;
   uploadedBy: string;
+  isPremium?: boolean;
+  price?: number | null;
   createdAt: string;
 }
