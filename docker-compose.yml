@@ -10,6 +10,7 @@ services:
       PROJECT_SERVICE_URL: http://project-service:8083
       TASK_SERVICE_URL: http://task-service:8084
       JUDGING_SERVICE_URL: http://judging-service:8085
+      SHOWCASE_SERVICE_URL: http://showcase-service:8086
     ports:
       - "8080:8080"
     depends_on:
@@ -18,6 +19,7 @@ services:
       - project-service
       - task-service
       - judging-service
+      - showcase-service
 
   auth-service:
     build:
@@ -83,3 +85,22 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
     ports:
       - "8085:8085"
+
+  showcase-service:
+    build:
+      context: ./showcase-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
+      SHOWCASE_UPLOAD_DIR: /data/uploads
+    volumes:
+      - showcase_uploads:/data/uploads
+    ports:
+      - "8086:8086"
+
+volumes:
+  showcase_uploads:

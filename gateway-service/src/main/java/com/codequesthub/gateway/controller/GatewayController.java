@@ -37,14 +37,16 @@ public class GatewayController {
                               @Value("${group.service.url}") String groupServiceUrl,
                               @Value("${project.service.url}") String projectServiceUrl,
                               @Value("${task.service.url}") String taskServiceUrl,
-                              @Value("${judging.service.url}") String judgingServiceUrl) {
+                              @Value("${judging.service.url}") String judgingServiceUrl,
+                              @Value("${showcase.service.url}") String showcaseServiceUrl) {
         this.restTemplate = restTemplate;
         this.routes = List.of(
-                new Route("/api/auth/", authServiceUrl),
-                new Route("/api/groups/", groupServiceUrl),
-                new Route("/api/proposals/", projectServiceUrl),
-                new Route("/api/tasks/", taskServiceUrl),
-                new Route("/api/judging/", judgingServiceUrl)
+                new Route("/api/auth", authServiceUrl),
+                new Route("/api/groups", groupServiceUrl),
+                new Route("/api/proposals", projectServiceUrl),
+                new Route("/api/tasks", taskServiceUrl),
+                new Route("/api/judging", judgingServiceUrl),
+                new Route("/api/showcase", showcaseServiceUrl)
         );
     }
 
@@ -54,8 +56,11 @@ public class GatewayController {
     public ResponseEntity<byte[]> proxy(HttpServletRequest request) throws IOException {
         String path = request.getRequestURI();
 
+        // Match the bare prefix itself (e.g. "/api/showcase") as well as sub-paths
+        // ("/api/showcase/123") — a path must not be allowed to match by sharing a string
+        // prefix without the separator (e.g. "/api/showcase2").
         Route route = routes.stream()
-                .filter(r -> path.startsWith(r.prefix()))
+                .filter(r -> path.equals(r.prefix()) || path.startsWith(r.prefix() + "/"))
                 .findFirst()
                 .orElse(null);
 
