@@ -124,3 +124,34 @@ export interface TaskAnalytics {
   progressPercentage: number;
   memberContributions: MemberContribution[];
 }
+
+// ============================================================
+// Phase 4: Community & Resources
+// ============================================================
+
+export type PostCategory = 'discussion' | 'tutorial' | 'help' | 'announcement';
+
+export interface Post {
+  id: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  content: string;
+  category: PostCategory;
+  linkUrl?: string | null;
+  createdAt: string;
+}
+
+export type ResourceType = 'hall_of_fame' | 'material';
+
+export interface Resource {
+  id: string;
+  title: string;
+  description: string;
+  resourceType: ResourceType;
+  linkUrl?: string | null;
+  thumbnailUrl?: string | null;
+  cohortId?: string | null;
+  uploadedBy: string;
+  createdAt: string;
+}

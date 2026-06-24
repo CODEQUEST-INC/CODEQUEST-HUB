@@ -18,6 +18,10 @@ import AdminDashboard from '../screens/projects/AdminDashboard';
 // Phase 3 Screens
 import KanbanBoardScreen from '../screens/tasks/KanbanBoardScreen';
 
+// Phase 4 Screens
+import CommunityScreen from '../screens/main/CommunityScreen';
+import ResourcesScreen from '../screens/main/ResourcesScreen';
+
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -27,6 +31,8 @@ export type RootStackParamList = {
   SupervisorReview: undefined;
   AdminDashboard: undefined;
   KanbanBoard: undefined;
+  Community: undefined;
+  Resources: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -53,6 +59,8 @@ export default function AppNavigator() {
             <Stack.Screen name="SupervisorReview" component={SupervisorReviewScreen} />
             <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
             <Stack.Screen name="KanbanBoard" component={KanbanBoardScreen} />
+            <Stack.Screen name="Community" component={CommunityScreen} />
+            <Stack.Screen name="Resources" component={ResourcesScreen} />
           </>
         ) : (
           // Unauthenticated Stack

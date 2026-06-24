@@ -92,6 +92,22 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
         )}
       <View className="px-6 pb-12 mt-2">
+        <Text className="text-slate-800 dark:text-white text-xl font-bold mb-4">Phase 4: Ecosystem</Text>
+        <View className="flex-row space-x-3 mb-6">
+          <TouchableOpacity 
+            className="flex-1 bg-teal-500 rounded-xl p-4 items-center justify-center shadow-sm"
+            onPress={() => navigation.navigate('Community')}
+          >
+            <Text className="text-white font-bold text-base text-center">💬 Community Hub</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            className="flex-1 bg-brand-orange rounded-xl p-4 items-center justify-center shadow-sm"
+            onPress={() => navigation.navigate('Resources')}
+          >
+            <Text className="text-white font-bold text-base text-center">📚 Resources & Hall of Fame</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text className="text-slate-800 dark:text-white text-xl font-bold mb-4">Phase 3 Testing (Tasks)</Text>
         <TouchableOpacity 
           className="w-full bg-indigo-500 rounded-xl p-4 items-center flex-row justify-center shadow-sm mb-6"
