@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -48,6 +49,14 @@ public class ShowcaseController {
         UUID userId = UUID.fromString((String) auth.getPrincipal());
         ShowcaseEntryResponse entry = showcaseService.uploadPhoto(groupId, userId, file);
         return ResponseEntity.ok(Map.of("data", entry));
+    }
+
+    // admin — unpublish/moderate
+    @DeleteMapping("/{groupId}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> deleteEntry(@PathVariable UUID groupId) {
+        showcaseService.deleteEntry(groupId);
+        return ResponseEntity.noContent().build();
     }
 
     // public

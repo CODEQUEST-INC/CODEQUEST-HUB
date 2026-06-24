@@ -22,6 +22,9 @@ public class JudgingCriterion {
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal weight;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -41,6 +44,8 @@ public class JudgingCriterion {
     public void setName(String v) { this.name = v; }
     public BigDecimal getWeight() { return weight; }
     public void setWeight(BigDecimal v) { this.weight = v; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean v) { this.active = v; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

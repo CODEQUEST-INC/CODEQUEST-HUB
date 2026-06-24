@@ -1,7 +1,7 @@
 package com.codequesthub.auth.controller;
 
 import com.codequesthub.auth.dto.*;
-import com.codequesthub.auth.security.JwtUtil;
+import com.codequesthub.common.security.JwtUtil;
 import com.codequesthub.auth.service.AuthService;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;

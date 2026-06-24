@@ -3,7 +3,7 @@ package com.codequesthub.auth.service;
 import com.codequesthub.auth.dto.*;
 import com.codequesthub.auth.entity.User;
 import com.codequesthub.auth.repository.UserRepository;
-import com.codequesthub.auth.security.JwtUtil;
+import com.codequesthub.common.security.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

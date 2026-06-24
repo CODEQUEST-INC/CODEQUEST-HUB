@@ -1,5 +1,6 @@
 package com.codequesthub.gateway.controller;
 
+import com.codequesthub.gateway.filter.RequestLoggingFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -43,6 +44,7 @@ public class GatewayController {
         this.routes = List.of(
                 new Route("/api/auth", authServiceUrl),
                 new Route("/api/groups", groupServiceUrl),
+                new Route("/api/cohorts", groupServiceUrl),
                 new Route("/api/proposals", projectServiceUrl),
                 new Route("/api/tasks", taskServiceUrl),
                 new Route("/api/judging", judgingServiceUrl),
@@ -77,6 +79,12 @@ public class GatewayController {
                 Collections.list(request.getHeaders(name)).forEach(value -> headers.add(name, value));
             }
         });
+        if (!headers.containsKey(RequestLoggingFilter.REQUEST_ID_HEADER)) {
+            Object requestId = request.getAttribute(RequestLoggingFilter.REQUEST_ID_ATTRIBUTE);
+            if (requestId != null) {
+                headers.add(RequestLoggingFilter.REQUEST_ID_HEADER, requestId.toString());
+            }
+        }
 
         byte[] body = request.getInputStream().readAllBytes();
         HttpEntity<byte[]> entity = new HttpEntity<>(body.length > 0 ? body : null, headers);

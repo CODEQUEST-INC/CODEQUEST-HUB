@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface JudgingCriteriaRepository extends JpaRepository<JudgingCriterion, UUID> {
     List<JudgingCriterion> findByCohortId(UUID cohortId);
+    List<JudgingCriterion> findByCohortIdAndActiveTrue(UUID cohortId);
 }

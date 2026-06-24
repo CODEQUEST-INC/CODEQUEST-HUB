@@ -1,6 +1,8 @@
 package com.codequesthub.project.config;
 
-import com.codequesthub.project.security.JwtAuthFilter;
+import com.codequesthub.common.security.JwtAuthFilter;
+import com.codequesthub.common.security.JwtUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,11 +14,19 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    private final JwtAuthFilter jwtAuthFilter;
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) { this.jwtAuthFilter = jwtAuthFilter; }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public JwtUtil jwtUtil(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration-ms}") long expirationMs) {
+        return new JwtUtil(secret, expirationMs);
+    }
+
+    @Bean
+    public JwtAuthFilter jwtAuthFilter(JwtUtil jwtUtil) {
+        return new JwtAuthFilter(jwtUtil);
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http.csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a.requestMatchers("/api/proposals/health", "/error").permitAll().anyRequest().authenticated())

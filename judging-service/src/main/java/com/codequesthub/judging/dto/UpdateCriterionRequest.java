@@ -17,8 +17,13 @@ public class UpdateCriterionRequest {
     @DecimalMax(value = "100")
     private BigDecimal weight;
 
+    @NotNull
+    private Boolean active;
+
     public String getName() { return name; }
     public void setName(String v) { this.name = v; }
     public BigDecimal getWeight() { return weight; }
     public void setWeight(BigDecimal v) { this.weight = v; }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean v) { this.active = v; }
 }

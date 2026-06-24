@@ -123,6 +123,16 @@ public class ShowcaseService {
         return toResponse(entry, group);
     }
 
+    @Transactional
+    public void deleteEntry(UUID groupId) {
+        ShowcaseEntry entry = entryRepo.findByGroupId(groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No showcase entry for this group"));
+        entryRepo.delete(entry);
+        if (entry.getPhotoPath() != null) {
+            deleteFileQuietly(entry.getPhotoPath());
+        }
+    }
+
     public List<ShowcaseEntryResponse> listEntries(UUID cohortId) {
         List<ShowcaseEntry> entries = cohortId != null
             ? entryRepo.findByCohortIdOrderByCreatedAtDesc(cohortId)

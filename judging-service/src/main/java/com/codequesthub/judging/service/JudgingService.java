@@ -44,7 +44,7 @@ public class JudgingService {
     @Transactional
     public JudgingCriterion createCriterion(CreateCriterionRequest req) {
         findCohortOr404(req.getCohortId());
-        checkWeightBudget(req.getCohortId(), req.getWeight(), null);
+        checkWeightBudget(req.getCohortId(), req.getWeight(), null, true);
 
         JudgingCriterion c = new JudgingCriterion();
         c.setCohortId(req.getCohortId());
@@ -60,9 +60,10 @@ public class JudgingService {
     @Transactional
     public JudgingCriterion updateCriterion(UUID criterionId, UpdateCriterionRequest req) {
         JudgingCriterion c = findCriterionOr404(criterionId);
-        checkWeightBudget(c.getCohortId(), req.getWeight(), criterionId);
+        checkWeightBudget(c.getCohortId(), req.getWeight(), criterionId, req.getActive());
         c.setName(req.getName());
         c.setWeight(req.getWeight());
+        c.setActive(req.getActive());
         return criteriaRepo.save(c);
     }
 
@@ -76,16 +77,20 @@ public class JudgingService {
         criteriaRepo.delete(c);
     }
 
-    // A cohort's criteria weights must never exceed 100 in total.
-    private void checkWeightBudget(UUID cohortId, BigDecimal incomingWeight, UUID excludingCriterionId) {
-        BigDecimal existingTotal = criteriaRepo.findByCohortId(cohortId).stream()
+    // A cohort's ACTIVE criteria weights must never exceed 100 in total. Retired
+    // criteria don't consume any of that budget, and retiring one (incomingActive
+    // = false) never needs to be checked against it either.
+    private void checkWeightBudget(UUID cohortId, BigDecimal incomingWeight, UUID excludingCriterionId, boolean incomingActive) {
+        if (!incomingActive) return;
+
+        BigDecimal existingTotal = criteriaRepo.findByCohortIdAndActiveTrue(cohortId).stream()
             .filter(c -> excludingCriterionId == null || !c.getId().equals(excludingCriterionId))
             .map(JudgingCriterion::getWeight)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (existingTotal.add(incomingWeight).compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Total criteria weight for this cohort cannot exceed 100 (currently "
+                "Total active criteria weight for this cohort cannot exceed 100 (currently "
                     + existingTotal + ", adding " + incomingWeight + ")");
         }
     }
@@ -132,10 +137,10 @@ public class JudgingService {
                 "You are not an assigned judge for this group's cohort");
         }
 
-        List<JudgingCriterion> criteria = criteriaRepo.findByCohortId(group.getCohortId());
+        List<JudgingCriterion> criteria = criteriaRepo.findByCohortIdAndActiveTrue(group.getCohortId());
         if (criteria.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "No judging criteria have been configured for this cohort yet");
+                "No active judging criteria have been configured for this cohort yet");
         }
         Set<UUID> expectedCriterionIds = criteria.stream().map(JudgingCriterion::getId).collect(Collectors.toSet());
         Set<UUID> submittedCriterionIds = req.getScores().stream().map(ScoreEntry::getCriterionId).collect(Collectors.toSet());
