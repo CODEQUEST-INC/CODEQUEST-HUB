@@ -97,3 +97,30 @@ export interface ApiError {
 export interface ApiSuccess<T> {
   data: T;
 }
+
+export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
+
+export interface Task {
+  id: string;
+  groupId: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  assigneeId?: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MemberContribution {
+  userId: string;
+  fullName: string;
+  tasksCompleted: number;
+}
+
+export interface TaskAnalytics {
+  totalTasks: number;
+  completedTasks: number;
+  progressPercentage: number;
+  memberContributions: MemberContribution[];
+}

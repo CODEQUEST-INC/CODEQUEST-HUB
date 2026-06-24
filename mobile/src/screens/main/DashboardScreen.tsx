@@ -92,6 +92,14 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
         )}
       <View className="px-6 pb-12 mt-2">
+        <Text className="text-slate-800 dark:text-white text-xl font-bold mb-4">Phase 3 Testing (Tasks)</Text>
+        <TouchableOpacity 
+          className="w-full bg-indigo-500 rounded-xl p-4 items-center flex-row justify-center shadow-sm mb-6"
+          onPress={() => navigation.navigate('KanbanBoard')}
+        >
+          <Text className="text-white font-bold text-base">Student: Task Management (Kanban)</Text>
+        </TouchableOpacity>
+
         <Text className="text-slate-800 dark:text-white text-xl font-bold mb-4">Phase 2 Testing (Projects)</Text>
         
         <View className="space-y-3">
@@ -103,14 +111,14 @@ export default function DashboardScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            className="w-full bg-blue-500 rounded-xl p-4 items-center flex-row justify-center shadow-sm"
+            className="w-full bg-blue-500 rounded-xl p-4 items-center flex-row justify-center shadow-sm mt-3"
             onPress={() => navigation.navigate('SupervisorReview')}
           >
             <Text className="text-white font-bold text-base">Lecturer: Review Proposal</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            className="w-full bg-slate-800 dark:bg-slate-700 rounded-xl p-4 items-center flex-row justify-center shadow-sm"
+            className="w-full bg-slate-800 dark:bg-slate-700 rounded-xl p-4 items-center flex-row justify-center shadow-sm mt-3"
             onPress={() => navigation.navigate('AdminDashboard')}
           >
             <Text className="text-white font-bold text-base">Admin: Final Approvals</Text>

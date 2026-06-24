@@ -15,7 +15,21 @@ import ProposalStatusDashboard from '../screens/projects/ProposalStatusDashboard
 import SupervisorReviewScreen from '../screens/projects/SupervisorReviewScreen';
 import AdminDashboard from '../screens/projects/AdminDashboard';
 
-const Stack = createNativeStackNavigator();
+// Phase 3 Screens
+import KanbanBoardScreen from '../screens/tasks/KanbanBoardScreen';
+
+export type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  Dashboard: undefined;
+  SubmitProposal: undefined;
+  ProposalStatus: undefined;
+  SupervisorReview: undefined;
+  AdminDashboard: undefined;
+  KanbanBoard: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   const { user, isLoading } = useAuth();
@@ -38,6 +52,7 @@ export default function AppNavigator() {
             <Stack.Screen name="ProposalStatus" component={ProposalStatusDashboard} />
             <Stack.Screen name="SupervisorReview" component={SupervisorReviewScreen} />
             <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+            <Stack.Screen name="KanbanBoard" component={KanbanBoardScreen} />
           </>
         ) : (
           // Unauthenticated Stack
