@@ -101,12 +101,14 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
         {/* Inner Glass Container */}
         <View className="bg-white/90 dark:bg-slate-900/90 rounded-[41px] p-8 items-center justify-center w-[300px] h-[300px]">
-          <Image 
-            source={require('../../assets/logo.png')} 
-            style={{ width: 160, height: 160 }}
-            resizeMode="contain"
-          />
-          <Text className="text-2xl font-black text-slate-800 dark:text-white mt-6 tracking-widest uppercase">
+          <View className="bg-white rounded-[40px] p-2 shadow-sm mb-4">
+            <Image 
+              source={require('../../assets/logo.png')} 
+              style={{ width: 140, height: 140 }}
+              resizeMode="contain"
+            />
+          </View>
+          <Text className="text-2xl font-black text-slate-800 dark:text-white tracking-widest uppercase">
             CodeQuest
           </Text>
           <Text className="text-sm font-bold text-brand-purple dark:text-brand-lightPurple mt-1 tracking-widest uppercase">

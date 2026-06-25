@@ -9,6 +9,8 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import DashboardScreen from '../screens/main/DashboardScreen';
 import SplashScreen from '../screens/SplashScreen';
 import CreateProfileScreen from '../screens/auth/CreateProfileScreen';
+import ProfileScreen from '../screens/main/ProfileScreen';
+import MainTabNavigator from './MainTabNavigator';
 
 // Phase 2 Screens
 import ProposalSubmissionScreen from '../screens/projects/ProposalSubmissionScreen';
@@ -56,14 +58,19 @@ export default function AppNavigator() {
           user.profileCompleted ? (
             // Authenticated Stack
             <>
-              <Stack.Screen name="Dashboard" component={DashboardScreen} />
-              <Stack.Screen name="SubmitProposal" component={ProposalSubmissionScreen} />
-              <Stack.Screen name="ProposalStatus" component={ProposalStatusDashboard} />
-              <Stack.Screen name="SupervisorReview" component={SupervisorReviewScreen} />
-              <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-              <Stack.Screen name="KanbanBoard" component={KanbanBoardScreen} />
-              <Stack.Screen name="Community" component={CommunityScreen} />
-              <Stack.Screen name="Resources" component={ResourcesScreen} />
+              {/* Main Tabs */}
+              <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
+              
+              {/* Profile sub-route */}
+              <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
+              
+              {/* Project sub-routes */}
+              <Stack.Screen name="SubmitProposal" component={ProposalSubmissionScreen} options={{ headerShown: true, title: 'Submit Proposal' }} />
+              <Stack.Screen name="SupervisorReview" component={SupervisorReviewScreen} options={{ headerShown: true, title: 'Supervisor Review' }} />
+              <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ headerShown: true, title: 'Admin Dashboard' }} />
+              
+              {/* Other sub-routes */}
+              <Stack.Screen name="Resources" component={ResourcesScreen} options={{ headerShown: true, title: 'Resources' }} />
             </>
           ) : (
             // Incomplete Profile Trap
