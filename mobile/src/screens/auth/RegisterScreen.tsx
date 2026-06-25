@@ -21,7 +21,7 @@ export default function RegisterScreen({ navigation }: any) {
     setLoading(true);
     try {
       const response = await authApi.post('/register', { 
-        name, 
+        fullName: name, 
         email, 
         password,
         role: 'student' // default for now

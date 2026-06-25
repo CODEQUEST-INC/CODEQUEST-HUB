@@ -93,7 +93,7 @@ export async function login(req: Request, res: Response) {
 // ============================================================
 export async function me(req: Request, res: Response) {
   const user = await queryOne<User>(
-    `SELECT id, full_name AS "fullName", email, role, student_id AS "studentId", index_number AS "indexNumber", created_at AS "createdAt", updated_at AS "updatedAt"
+    `SELECT id, full_name AS "fullName", email, role, student_id AS "studentId", index_number AS "indexNumber", profile_completed AS "profileCompleted", created_at AS "createdAt", updated_at AS "updatedAt"
      FROM users WHERE id = $1`,
     [req.user!.id]
   );
