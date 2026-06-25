@@ -2,10 +2,11 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 4003 is the project-service which handles community endpoints
-const API_URL = 'http://172.20.10.14:4003/api/community';
+const API_URL = 'http://10.132.1.216:4003/api/community';
 
 const communityApi = axios.create({
   baseURL: API_URL,
+  timeout: 10000,
 });
 
 communityApi.interceptors.request.use(

@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import authApi from '../../api/auth';
 
 export default function CreateProfileScreen() {
-  const { user, login } = useAuth();
+  const { user, login, updateUser } = useAuth();
   const [role, setRole] = useState<'student' | 'supervisor' | 'alumni' | 'senior'>('student');
   const [bio, setBio] = useState('');
   const [github, setGithub] = useState('');
@@ -113,7 +113,7 @@ export default function CreateProfileScreen() {
 
       {/* Submit */}
       <TouchableOpacity 
-        className="w-full bg-brand-purple rounded-xl p-5 items-center shadow-lg shadow-brand-purple/50 flex-row justify-center"
+        className="w-full bg-brand-purple rounded-xl p-5 items-center shadow-lg shadow-brand-purple/50 flex-row justify-center mb-4"
         onPress={handleSubmit}
         disabled={loading}
       >
@@ -122,6 +122,18 @@ export default function CreateProfileScreen() {
         ) : (
           <Text className="text-white font-bold text-lg">Complete Profile</Text>
         )}
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        className="w-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-5 items-center shadow-sm"
+        onPress={() => {
+          if (user) {
+            updateUser({ ...user, profileCompleted: true });
+          }
+        }}
+        disabled={loading}
+      >
+        <Text className="text-slate-700 dark:text-slate-300 font-bold text-lg">Skip for now</Text>
       </TouchableOpacity>
     </ScrollView>
   );

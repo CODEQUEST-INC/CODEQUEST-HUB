@@ -32,9 +32,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const response = await authApi.get('/me');
           setUser({ ...response.data.data, profileCompleted: response.data.data.profileCompleted ?? false });
         }
-      } catch (e) {
-        console.error('Failed to restore token', e);
-        // Token might be invalid or expired
+      } catch (e: any) {
+        console.warn('Failed to restore token:', e.message);
+        // Token might be invalid or expired, or network unavailable
         await AsyncStorage.removeItem('jwt_token');
       } finally {
         setIsLoading(false);

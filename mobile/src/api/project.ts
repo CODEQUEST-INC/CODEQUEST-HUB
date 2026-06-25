@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Hardcoded IP for Expo Go on physical device (matches auth and group APIs)
-const API_URL = 'http://172.20.10.14:4003/api/projects';
+const API_URL = 'http://10.132.1.216:4003/api/projects';
 
 const projectApi = axios.create({
   baseURL: API_URL

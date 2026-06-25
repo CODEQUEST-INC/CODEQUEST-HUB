@@ -2,10 +2,11 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Hardcoded IP for Expo Go on physical device
-const API_URL = 'http://172.20.10.14:4002/api/groups';
+const API_URL = 'http://10.132.1.216:4002/api/groups';
 
 const groupApi = axios.create({
   baseURL: API_URL,
+  timeout: 10000,
 });
 
 groupApi.interceptors.request.use(async (config) => {
