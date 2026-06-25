@@ -111,30 +111,32 @@ export default function CreateProfileScreen() {
         </Text>
       </TouchableOpacity>
 
-      {/* Submit */}
-      <TouchableOpacity 
-        className="w-full bg-brand-purple rounded-xl p-5 items-center shadow-lg shadow-brand-purple/50 flex-row justify-center mb-4"
-        onPress={handleSubmit}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="text-white font-bold text-lg">Complete Profile</Text>
-        )}
-      </TouchableOpacity>
+      {/* Action Buttons */}
+      <View className="flex-row gap-3">
+        <TouchableOpacity 
+          className="flex-1 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-4 items-center justify-center shadow-sm"
+          onPress={() => {
+            if (user) {
+              updateUser({ ...user, profileCompleted: true });
+            }
+          }}
+          disabled={loading}
+        >
+          <Text className="text-slate-700 dark:text-slate-300 font-bold text-base">Skip for now</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity 
-        className="w-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-5 items-center shadow-sm"
-        onPress={() => {
-          if (user) {
-            updateUser({ ...user, profileCompleted: true });
-          }
-        }}
-        disabled={loading}
-      >
-        <Text className="text-slate-700 dark:text-slate-300 font-bold text-lg">Skip for now</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          className="flex-[1.5] bg-brand-purple rounded-xl p-4 items-center justify-center shadow-lg shadow-brand-purple/50"
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white font-bold text-base">Complete Profile</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
