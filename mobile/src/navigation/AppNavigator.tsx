@@ -63,7 +63,7 @@ export default function AppNavigator() {
               
               {/* Profile sub-route */}
               <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
-              <Stack.Screen name="CreateProfile" component={CreateProfileScreen} options={{ headerShown: true, title: 'Edit Profile' }} />
+              <Stack.Screen name="EditProfile" component={CreateProfileScreen} options={{ headerShown: true, title: 'Edit Profile' }} />
               
               {/* Project sub-routes */}
               <Stack.Screen name="SubmitProposal" component={ProposalSubmissionScreen} options={{ headerShown: true, title: 'Submit Proposal' }} />

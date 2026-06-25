@@ -50,7 +50,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity 
             className="flex-row items-center justify-between py-3"
-            onPress={() => navigation.navigate('CreateProfile' as never)}
+            onPress={() => navigation.navigate('EditProfile' as never)}
           >
             <View className="flex-row items-center">
               <View className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-full items-center justify-center mr-3">
