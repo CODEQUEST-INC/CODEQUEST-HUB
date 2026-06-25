@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import authApi from '../../api/auth';
+import { useNavigation } from '@react-navigation/native';
 
 export default function CreateProfileScreen() {
   const { user, login, updateUser } = useAuth();
-  const [role, setRole] = useState<'student' | 'supervisor' | 'alumni' | 'senior'>('student');
-  const [bio, setBio] = useState('');
-  const [github, setGithub] = useState('');
-  const [linkedin, setLinkedin] = useState('');
-  const [skills, setSkills] = useState('');
-  const [mentorshipStatus, setMentorshipStatus] = useState(false);
+  const navigation = useNavigation();
+  
+  const [role, setRole] = useState<'student' | 'supervisor' | 'alumni' | 'senior'>((user?.role as any) || 'student');
+  const [bio, setBio] = useState(user?.bio || '');
+  const [github, setGithub] = useState(user?.socialLinks?.github || '');
+  const [linkedin, setLinkedin] = useState(user?.socialLinks?.linkedin || '');
+  const [skills, setSkills] = useState(user?.skills?.join(', ') || '');
+  const [mentorshipStatus, setMentorshipStatus] = useState(user?.mentorshipStatus || false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -42,8 +45,12 @@ export default function CreateProfileScreen() {
 
   return (
     <ScrollView className="flex-1 bg-slate-50 dark:bg-slate-900" contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
-      <Text className="text-3xl font-bold text-slate-900 dark:text-white mt-12 mb-2">Build Your Profile</Text>
-      <Text className="text-slate-600 dark:text-slate-400 mb-8">Welcome to CodeQuest Hub! Let's get your profile set up so we can customize your dashboard.</Text>
+      <Text className="text-3xl font-bold text-slate-900 dark:text-white mt-12 mb-2">
+        {user?.profileCompleted ? 'Edit Profile' : 'Build Your Profile'}
+      </Text>
+      <Text className="text-slate-600 dark:text-slate-400 mb-8">
+        {user?.profileCompleted ? 'Update your personal information and skills.' : 'Welcome to CodeQuest Hub! Let\'s get your profile set up so we can customize your dashboard.'}
+      </Text>
 
       {/* 1. Identity */}
       <Text className="text-xl font-bold text-slate-900 dark:text-white mb-4">1. I am a...</Text>
@@ -116,13 +123,17 @@ export default function CreateProfileScreen() {
         <TouchableOpacity 
           className="flex-1 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-4 items-center justify-center shadow-sm"
           onPress={() => {
-            if (user) {
+            if (user?.profileCompleted) {
+              navigation.goBack();
+            } else if (user) {
               updateUser({ ...user, profileCompleted: true });
             }
           }}
           disabled={loading}
         >
-          <Text className="text-slate-700 dark:text-slate-300 font-bold text-base">Skip for now</Text>
+          <Text className="text-slate-700 dark:text-slate-300 font-bold text-base">
+            {user?.profileCompleted ? 'Cancel' : 'Skip for now'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -133,7 +144,9 @@ export default function CreateProfileScreen() {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text className="text-white font-bold text-base">Complete Profile</Text>
+            <Text className="text-white font-bold text-base">
+              {user?.profileCompleted ? 'Save Changes' : 'Complete Profile'}
+            </Text>
           )}
         </TouchableOpacity>
       </View>

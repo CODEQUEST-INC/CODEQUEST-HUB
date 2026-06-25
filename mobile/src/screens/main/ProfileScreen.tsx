@@ -48,7 +48,10 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
           </TouchableOpacity>
 
-          <TouchableOpacity className="flex-row items-center justify-between py-3">
+          <TouchableOpacity 
+            className="flex-row items-center justify-between py-3"
+            onPress={() => navigation.navigate('CreateProfile' as never)}
+          >
             <View className="flex-row items-center">
               <View className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-full items-center justify-center mr-3">
                 <Ionicons name="person" size={20} color="#94a3b8" />
