@@ -1,9 +1,11 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { AuthStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography } from '../theme';
+
+const logo = require('../../assets/icon.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -28,6 +30,7 @@ export default function LoginScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      <Image source={logo} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>CodeQuestHub</Text>
 
       <TextInput
@@ -63,6 +66,7 @@ export default function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+  logo: { width: 88, height: 88, alignSelf: 'center', marginBottom: spacing.md },
   title: { ...typography.heading, fontSize: 28, textAlign: 'center', marginBottom: spacing.xxl, color: colors.primaryForeground },
   input: {
     borderWidth: 1,
