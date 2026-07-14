@@ -35,6 +35,10 @@ export const colors = {
   textMuted: '#6B6980',
   textOnPrimary: '#FFFFFF',
 
+  // Neutral for inactive tab bar icons — deliberately lighter than textMuted
+  // (which is used for readable secondary text) so inactive tabs recede.
+  tabBarInactive: '#9CA3AF',
+
   danger: '#DC2626',
   dangerTint: '#FEE2E2',
 
