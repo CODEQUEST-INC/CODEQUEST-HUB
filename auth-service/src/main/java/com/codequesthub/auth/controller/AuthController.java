@@ -42,17 +42,33 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<?> me(@RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", "unauthorized", "message", "Missing Authorization header"));
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
         }
-        String token = authHeader.substring(7);
-        if (!jwtUtil.isValid(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", "unauthorized", "message", "Invalid or expired token"));
-        }
-        Claims claims = jwtUtil.parseToken(token);
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
         UserResponse user = authService.me(claims.getSubject());
         return ResponseEntity.ok(Map.of("data", user));
+    }
+
+    // Any authenticated user — bulk id-to-name lookup, e.g. "Group 129" rendering
+    // member names instead of raw UUIDs. Deliberately returns only id+fullName.
+    @GetMapping("/users")
+    public ResponseEntity<?> lookupUsers(@RequestParam java.util.List<java.util.UUID> ids,
+                                         @RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        return ResponseEntity.ok(Map.of("data", authService.lookupUsers(ids)));
+    }
+
+    private boolean requireValidToken(String authHeader) {
+        return authHeader != null && authHeader.startsWith("Bearer ") && jwtUtil.isValid(authHeader.substring(7));
+    }
+
+    private ResponseEntity<?> unauthorized(String authHeader) {
+        String message = (authHeader == null || !authHeader.startsWith("Bearer "))
+            ? "Missing Authorization header"
+            : "Invalid or expired token";
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "unauthorized", "message", message));
     }
 }

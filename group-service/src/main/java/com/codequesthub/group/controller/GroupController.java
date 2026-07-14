@@ -43,6 +43,12 @@ public class GroupController {
             .body(Map.of("data", groupService.assignMembers(groupId, req)));
     }
 
+    // any authenticated user — list groups in a cohort (e.g. for a judge picking a group to score)
+    @GetMapping
+    public ResponseEntity<?> listByCohort(@RequestParam UUID cohortId) {
+        return ResponseEntity.ok(Map.of("data", groupService.listByCohort(cohortId)));
+    }
+
     // student — their own group
     @GetMapping("/me")
     @PreAuthorize("hasRole('student')")

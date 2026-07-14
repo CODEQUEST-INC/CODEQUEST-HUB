@@ -22,18 +22,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const storedToken = await tokenStorage.get();
-      if (!storedToken) {
-        setStatus('signedOut');
-        return;
-      }
       try {
+        const storedToken = await tokenStorage.get();
+        if (!storedToken) {
+          setStatus('signedOut');
+          return;
+        }
         const me = await authApi.me(storedToken);
         setToken(storedToken);
         setUser(me);
         setStatus('signedIn');
       } catch {
-        await tokenStorage.clear();
+        await tokenStorage.clear().catch(() => {});
         setStatus('signedOut');
       }
     })();

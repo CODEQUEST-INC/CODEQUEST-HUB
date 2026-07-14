@@ -86,6 +86,12 @@ public class GroupService {
         return buildGroupResponse(group, members);
     }
 
+    public List<Map<String, Object>> listByCohort(UUID cohortId) {
+        return groupRepo.findByCohortId(cohortId).stream()
+            .map(group -> buildGroupResponse(group, memberRepo.findByGroupId(group.getId())))
+            .toList();
+    }
+
     private Map<String, Object> buildGroupResponse(Group group, List<GroupMember> members) {
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("id", group.getId());

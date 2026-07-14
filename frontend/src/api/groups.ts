@@ -21,3 +21,11 @@ export interface GroupResponse {
 export function getMyGroup(token: string): Promise<GroupResponse> {
   return request<GroupResponse>('/api/groups/me', { token });
 }
+
+export function getGroupById(groupId: string, token: string): Promise<GroupResponse> {
+  return request<GroupResponse>(`/api/groups/${groupId}`, { token });
+}
+
+export function listGroupsByCohort(cohortId: string, token: string): Promise<GroupResponse[]> {
+  return request<GroupResponse[]>(`/api/groups?cohortId=${cohortId}`, { token });
+}

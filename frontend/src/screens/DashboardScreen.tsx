@@ -10,11 +10,10 @@ export default function DashboardScreen() {
       <Text style={styles.greeting}>Welcome, {user?.fullName}</Text>
       <Text style={styles.role}>Role: {user?.role}</Text>
 
-      {user?.role !== 'student' ? (
+      {user?.role === 'mentor' ? (
         <View style={styles.card}>
           <Text style={styles.cardText}>
-            The group workspace is only available to student accounts right now. Support for {user?.role}{' '}
-            dashboards is coming in a later milestone.
+            There's no dedicated mentor dashboard yet — that's coming in a later milestone.
           </Text>
         </View>
       ) : null}

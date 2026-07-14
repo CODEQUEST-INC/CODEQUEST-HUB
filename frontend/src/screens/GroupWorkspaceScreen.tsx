@@ -4,6 +4,7 @@ import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } f
 import { getMyGroup, GroupResponse } from '../api/groups';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useUserNames, userLabel } from '../hooks/useUserNames';
 
 export default function GroupWorkspaceScreen() {
   const { token } = useAuth();
@@ -35,6 +36,12 @@ export default function GroupWorkspaceScreen() {
     }, [load])
   );
 
+  const names = useUserNames([
+    group?.groupLeaderId,
+    group?.supervisorId,
+    ...(group?.members.map((m) => m.userId) ?? []),
+  ]);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -63,8 +70,12 @@ export default function GroupWorkspaceScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>{group.name ?? `Group ${group.groupNumber}`}</Text>
       <Text style={styles.subtitle}>Group #{group.groupNumber}</Text>
-      {group.groupLeaderId ? <Text style={styles.meta}>Leader ID: {group.groupLeaderId}</Text> : null}
-      {group.supervisorId ? <Text style={styles.meta}>Supervisor ID: {group.supervisorId}</Text> : null}
+      {group.groupLeaderId ? (
+        <Text style={styles.meta}>Leader: {userLabel(group.groupLeaderId, names)}</Text>
+      ) : null}
+      {group.supervisorId ? (
+        <Text style={styles.meta}>Supervisor: {userLabel(group.supervisorId, names)}</Text>
+      ) : null}
 
       <Text style={styles.sectionHeading}>Members ({group.members.length})</Text>
       <FlatList
@@ -75,7 +86,7 @@ export default function GroupWorkspaceScreen() {
         renderItem={({ item }) => (
           <View style={styles.memberRow}>
             <Text style={styles.memberText}>
-              {item.userId}
+              {userLabel(item.userId, names)}
               {item.userId === group.groupLeaderId ? ' (leader)' : ''}
             </Text>
           </View>

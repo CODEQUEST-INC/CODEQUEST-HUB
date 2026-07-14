@@ -65,4 +65,13 @@ public class AuthService {
             .map(UserResponse::from)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
+
+    // Minimal-disclosure bulk lookup (id + fullName only) so other services/clients
+    // can resolve the user IDs they store (group members, task assignees, etc.)
+    // to display names without exposing email/role/studentId.
+    public java.util.List<UserSummaryResponse> lookupUsers(java.util.List<java.util.UUID> ids) {
+        return userRepo.findAllById(ids).stream()
+            .map(UserSummaryResponse::from)
+            .toList();
+    }
 }
