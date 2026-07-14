@@ -1,9 +1,13 @@
+import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GroupResponse, listGroupsByCohort } from '../../api/groups';
 import { getMyScorecard, JudgingCriterion, listCriteria, ScoreEntry, submitScorecard } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
+import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
+import ProgressBar from '../../components/ProgressBar';
+import { accentList, colors, radius, spacing, typography } from '../../theme';
 
 export default function ScorecardScreen() {
   const { token } = useAuth();
@@ -81,7 +85,7 @@ export default function ScorecardScreen() {
       <Text style={styles.label}>Cohort</Text>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
-      {loading ? <ActivityIndicator /> : null}
+      {loading ? <ActivityIndicator color={colors.primary} /> : null}
 
       {cohortId && !loading ? (
         <>
@@ -108,71 +112,84 @@ export default function ScorecardScreen() {
       ) : null}
 
       {groupId && criteria.length > 0 ? (
-        <View style={styles.card}>
-          {criteria.map((c) => (
-            <View key={c.id} style={styles.scoreRow}>
-              <Text style={styles.criterionName}>
-                {c.name} <Text style={styles.criterionWeight}>({c.weight}%)</Text>
-              </Text>
-              <TextInput
-                style={styles.scoreInput}
-                value={scores[c.id] ?? ''}
-                onChangeText={(v) => setScores((prev) => ({ ...prev, [c.id]: v }))}
-                keyboardType="numeric"
-                placeholder="1-10"
-                maxLength={2}
-              />
-            </View>
-          ))}
+        <Card style={styles.scoreCard}>
+          {criteria.map((c, i) => {
+            const raw = scores[c.id];
+            const value = raw ? parseInt(raw, 10) : NaN;
+            const barColor = accentList[i % accentList.length].accent;
+            return (
+              <View key={c.id} style={styles.scoreRow}>
+                <View style={styles.scoreRowTop}>
+                  <Text style={styles.criterionName}>
+                    {c.name} <Text style={styles.criterionWeight}>({c.weight}%)</Text>
+                  </Text>
+                  <TextInput
+                    style={styles.scoreInput}
+                    value={scores[c.id] ?? ''}
+                    onChangeText={(v) => setScores((prev) => ({ ...prev, [c.id]: v }))}
+                    keyboardType="numeric"
+                    placeholder="1-10"
+                    maxLength={2}
+                  />
+                </View>
+                <ProgressBar value={Number.isFinite(value) ? value / 10 : 0} color={barColor} />
+              </View>
+            );
+          })}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          {success ? <Text style={styles.success}>Scorecard submitted.</Text> : null}
+          {success ? (
+            <View style={styles.successRow}>
+              <Feather name="check-circle" size={16} color={colors.accents.green.fg} />
+              <Text style={styles.success}>Scorecard submitted.</Text>
+            </View>
+          ) : null}
 
           <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
-            {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit scorecard</Text>}
+            {submitting ? (
+              <ActivityIndicator color={colors.textOnPrimary} />
+            ) : (
+              <Text style={styles.buttonText}>Submit scorecard</Text>
+            )}
           </Pressable>
-        </View>
+        </Card>
       ) : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 8 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginTop: 8 },
-  row: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+  label: { ...typography.subheading, fontSize: 14, marginTop: spacing.sm },
+  row: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
   chip: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
-  chipSelected: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  chipText: { color: '#374151' },
-  chipTextSelected: { color: '#fff' },
-  card: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 12,
-    gap: 12,
-  },
-  scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  criterionName: { fontSize: 14, flex: 1 },
-  criterionWeight: { color: '#6b7280' },
+  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.text },
+  chipTextSelected: { color: colors.textOnPrimary },
+  scoreCard: { marginTop: spacing.md, gap: spacing.lg },
+  scoreRow: { gap: spacing.sm },
+  scoreRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  criterionName: { ...typography.body, flex: 1 },
+  criterionWeight: { color: colors.textMuted },
   scoreInput: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 8,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
     width: 60,
     textAlign: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
-  button: { backgroundColor: '#2563eb', borderRadius: 8, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  emptyText: { color: '#6b7280' },
-  error: { color: '#dc2626' },
-  success: { color: '#15803d' },
+  button: { backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.lg, alignItems: 'center' },
+  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+  emptyText: { color: colors.textMuted },
+  error: { color: colors.danger },
+  successRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  success: { color: colors.accents.green.fg },
 });

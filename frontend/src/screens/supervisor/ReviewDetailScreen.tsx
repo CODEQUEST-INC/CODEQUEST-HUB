@@ -5,6 +5,7 @@ import { reviewProposal, ReviewAction } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 import { SupervisorStackParamList } from '../../navigation/types';
+import { colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<SupervisorStackParamList, 'ReviewDetail'>;
 
@@ -62,6 +63,7 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
             value={feedback}
             onChangeText={setFeedback}
             placeholder="Explain what needs to change..."
+            placeholderTextColor={colors.textMuted}
             multiline
           />
 
@@ -69,7 +71,7 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
 
           <Pressable style={styles.approveButton} onPress={() => act('approved')} disabled={!!submittingAction}>
             {submittingAction === 'approved' ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.textOnPrimary} />
             ) : (
               <Text style={styles.buttonText}>Approve</Text>
             )}
@@ -80,14 +82,14 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
             disabled={!!submittingAction}
           >
             {submittingAction === 'changes_requested' ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.textOnPrimary} />
             ) : (
               <Text style={styles.buttonText}>Request changes</Text>
             )}
           </Pressable>
           <Pressable style={styles.rejectButton} onPress={() => act('rejected')} disabled={!!submittingAction}>
             {submittingAction === 'rejected' ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.textOnPrimary} />
             ) : (
               <Text style={styles.buttonText}>Reject</Text>
             )}
@@ -101,44 +103,45 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 8 },
-  title: { fontSize: 22, fontWeight: '700', marginTop: 8 },
-  meta: { fontSize: 13, color: '#6b7280', marginTop: 16 },
-  sectionHeading: { fontSize: 15, fontWeight: '600', marginTop: 16 },
-  body: { fontSize: 14, color: '#374151' },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  feedbackLabel: { marginTop: 20 },
+  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+  title: { ...typography.heading, fontSize: 20, marginTop: spacing.sm },
+  meta: { ...typography.caption, marginTop: spacing.lg },
+  sectionHeading: { ...typography.subheading, fontSize: 15, marginTop: spacing.lg },
+  body: { ...typography.body, color: colors.textMuted },
+  label: { ...typography.body, fontWeight: '600' },
+  feedbackLabel: { marginTop: spacing.xl },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
     fontSize: 16,
     minHeight: 90,
     textAlignVertical: 'top',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
   },
-  error: { color: '#dc2626', marginTop: 8 },
+  error: { color: colors.danger, marginTop: spacing.sm },
   approveButton: {
-    backgroundColor: '#15803d',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.accents.green.accent,
+    borderRadius: radius.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: spacing.lg,
   },
   changesButton: {
-    backgroundColor: '#b45309',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.accents.amber.accent,
+    borderRadius: radius.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: spacing.md,
   },
   rejectButton: {
-    backgroundColor: '#b91c1c',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.danger,
+    borderRadius: radius.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: spacing.md,
   },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
 });

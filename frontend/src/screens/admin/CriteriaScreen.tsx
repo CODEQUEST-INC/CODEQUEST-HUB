@@ -4,7 +4,10 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, Tex
 import { ApiError } from '../../api/client';
 import { createCriterion, deleteCriterion, JudgingCriterion, listCriteria, updateCriterion } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
+import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
+import ProgressBar from '../../components/ProgressBar';
+import { accentList, colors, radius, spacing, typography } from '../../theme';
 
 export default function CriteriaScreen() {
   const { token } = useAuth();
@@ -100,12 +103,12 @@ export default function CriteriaScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
-      {loading ? <ActivityIndicator /> : null}
+      {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {criteria.map((c) =>
+      {criteria.map((c, i) =>
         editingId === c.id ? (
-          <View key={c.id} style={styles.card}>
+          <Card key={c.id}>
             <TextInput style={styles.input} value={editName} onChangeText={setEditName} placeholder="Name" />
             <TextInput
               style={styles.input}
@@ -115,8 +118,8 @@ export default function CriteriaScreen() {
               keyboardType="numeric"
             />
             <View style={styles.switchRow}>
-              <Text>Active</Text>
-              <Switch value={editActive} onValueChange={setEditActive} />
+              <Text style={styles.body}>Active</Text>
+              <Switch value={editActive} onValueChange={setEditActive} trackColor={{ true: colors.primary }} />
             </View>
             <View style={styles.rowButtons}>
               <Pressable style={styles.smallButton} onPress={onSaveEdit}>
@@ -126,13 +129,17 @@ export default function CriteriaScreen() {
                 <Text style={styles.smallSecondaryButtonText}>Cancel</Text>
               </Pressable>
             </View>
-          </View>
+          </Card>
         ) : (
-          <View key={c.id} style={styles.card}>
+          <Card key={c.id} tint={accentList[i % accentList.length]}>
             <Text style={styles.cardTitle}>
               {c.name} {!c.active ? '(retired)' : ''}
             </Text>
-            <Text style={styles.cardMeta}>Weight: {c.weight}</Text>
+            <ProgressBar
+              value={c.weight / 100}
+              color={c.active ? accentList[i % accentList.length].accent : colors.border}
+            />
+            <Text style={styles.cardMeta}>{c.weight}% of the total score</Text>
             <View style={styles.rowButtons}>
               <Pressable style={styles.smallButton} onPress={() => startEdit(c)}>
                 <Text style={styles.smallButtonText}>Edit</Text>
@@ -141,11 +148,11 @@ export default function CriteriaScreen() {
                 <Text style={styles.smallDangerButtonText}>Delete</Text>
               </Pressable>
             </View>
-          </View>
+          </Card>
         )
       )}
 
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.cardTitle}>Add criterion</Text>
         <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder="Name" />
         <TextInput
@@ -158,38 +165,45 @@ export default function CriteriaScreen() {
         <Pressable style={styles.button} onPress={onCreate}>
           <Text style={styles.buttonText}>Add</Text>
         </Pressable>
-      </View>
+      </Card>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 12 },
-  card: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 16,
-    gap: 8,
-  },
-  cardTitle: { fontWeight: '600', fontSize: 15 },
-  cardMeta: { fontSize: 13, color: '#6b7280' },
+  container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+  cardTitle: { ...typography.body, fontWeight: '600' },
+  cardMeta: { ...typography.caption },
+  body: { ...typography.body },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.md,
     fontSize: 15,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowButtons: { flexDirection: 'row', gap: 8 },
-  button: { backgroundColor: '#2563eb', borderRadius: 8, padding: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  smallButton: { backgroundColor: '#2563eb', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 14 },
-  smallButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  smallSecondaryButton: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 14 },
-  smallSecondaryButtonText: { color: '#374151', fontWeight: '600', fontSize: 13 },
-  smallDangerButton: { borderWidth: 1, borderColor: '#dc2626', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 14 },
-  smallDangerButtonText: { color: '#dc2626', fontWeight: '600', fontSize: 13 },
-  error: { color: '#dc2626' },
+  rowButtons: { flexDirection: 'row', gap: spacing.sm },
+  button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
+  buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
+  smallButton: { backgroundColor: colors.primary, borderRadius: radius.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  smallButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 13 },
+  smallSecondaryButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  smallSecondaryButtonText: { color: colors.text, fontWeight: '600', fontSize: 13 },
+  smallDangerButton: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
+  error: { color: colors.danger },
 });

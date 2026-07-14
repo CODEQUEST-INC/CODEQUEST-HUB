@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { UserRole } from '../api/auth';
 import { useAuth } from '../auth/AuthContext';
 import { AuthStackParamList } from '../navigation/types';
+import { colors, radius, spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -34,10 +35,17 @@ export default function RegisterScreen({ navigation }: Props) {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Create account</Text>
 
-      <TextInput style={styles.input} placeholder="Full name" value={fullName} onChangeText={setFullName} />
+      <TextInput
+        style={styles.input}
+        placeholder="Full name"
+        placeholderTextColor={colors.textMuted}
+        value={fullName}
+        onChangeText={setFullName}
+      />
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -46,6 +54,7 @@ export default function RegisterScreen({ navigation }: Props) {
       <TextInput
         style={styles.input}
         placeholder="Password (min 8 characters)"
+        placeholderTextColor={colors.textMuted}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -67,7 +76,11 @@ export default function RegisterScreen({ navigation }: Props) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Register</Text>}
+        {submitting ? (
+          <ActivityIndicator color={colors.textOnPrimary} />
+        ) : (
+          <Text style={styles.buttonText}>Register</Text>
+        )}
       </Pressable>
 
       <Pressable onPress={() => navigation.navigate('Login')}>
@@ -78,35 +91,36 @@ export default function RegisterScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 24 },
+  container: { flexGrow: 1, justifyContent: 'center', padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+  title: { ...typography.heading, fontSize: 28, textAlign: 'center', marginBottom: spacing.xxl, color: colors.primaryForeground },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
     fontSize: 16,
+    backgroundColor: colors.surface,
   },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginTop: 4 },
-  roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  label: { ...typography.body, fontWeight: '600', color: colors.text, marginTop: spacing.xs },
+  roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   roleChip: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
-  roleChipSelected: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  roleChipText: { color: '#374151', textTransform: 'capitalize' },
-  roleChipTextSelected: { color: '#fff' },
+  roleChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  roleChipText: { color: colors.text, textTransform: 'capitalize' },
+  roleChipTextSelected: { color: colors.textOnPrimary },
   button: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  error: { color: '#dc2626' },
-  link: { color: '#2563eb', textAlign: 'center', marginTop: 16 },
+  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+  error: { color: colors.danger },
+  link: { color: colors.primary, textAlign: 'center', marginTop: spacing.lg, fontWeight: '600' },
 });

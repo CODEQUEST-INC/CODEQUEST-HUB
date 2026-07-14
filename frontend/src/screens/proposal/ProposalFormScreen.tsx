@@ -5,6 +5,7 @@ import { ApiError } from '../../api/client';
 import { ProposalContentRequest, resubmitProposal, submitProposal } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import { ProposalStackParamList } from '../../navigation/types';
+import { colors, radius, spacing } from '../../theme';
 
 type Props = NativeStackScreenProps<ProposalStackParamList, 'ProposalForm'>;
 
@@ -46,7 +47,13 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.label}>Title</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Project title" />
+      <TextInput
+        style={styles.input}
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Project title"
+        placeholderTextColor={colors.textMuted}
+      />
 
       <Text style={styles.label}>Problem statement</Text>
       <TextInput
@@ -54,6 +61,7 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
         value={problemStatement}
         onChangeText={setProblemStatement}
         placeholder="What problem does this project solve?"
+        placeholderTextColor={colors.textMuted}
         multiline
       />
 
@@ -63,6 +71,7 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
         value={objectives}
         onChangeText={setObjectives}
         placeholder="Key objectives"
+        placeholderTextColor={colors.textMuted}
         multiline
       />
 
@@ -72,13 +81,14 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
         value={techStack}
         onChangeText={setTechStack}
         placeholder="e.g. React Native, Spring Boot, Postgres"
+        placeholderTextColor={colors.textMuted}
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
         {submitting ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.textOnPrimary} />
         ) : (
           <Text style={styles.buttonText}>{mode === 'resubmit' ? 'Resubmit' : 'Submit proposal'}</Text>
         )}
@@ -88,23 +98,24 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 12 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginTop: 4 },
+  container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: spacing.xs },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
     fontSize: 16,
+    backgroundColor: colors.surface,
   },
   multiline: { minHeight: 90, textAlignVertical: 'top' },
   button: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  error: { color: '#dc2626' },
+  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+  error: { color: colors.danger },
 });

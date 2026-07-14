@@ -1,32 +1,51 @@
+import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Card from '../../components/Card';
 import { AdminStackParamList } from '../../navigation/types';
+import { AccentSwatch, accents, colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminHub'>;
+
+const ITEMS: {
+  label: string;
+  route: keyof AdminStackParamList;
+  icon: React.ComponentProps<typeof Feather>['name'];
+  tint: AccentSwatch;
+}[] = [
+  { label: 'Judging criteria', route: 'Criteria', icon: 'sliders', tint: accents.violet },
+  { label: 'Assigned judges', route: 'Judges', icon: 'users', tint: accents.teal },
+  { label: 'Leaderboard', route: 'Leaderboard', icon: 'award', tint: accents.amber },
+];
 
 export default function AdminHubScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
-      <Pressable style={styles.button} onPress={() => navigation.navigate('Criteria')}>
-        <Text style={styles.buttonText}>Judging criteria</Text>
-      </Pressable>
-      <Pressable style={styles.button} onPress={() => navigation.navigate('Judges')}>
-        <Text style={styles.buttonText}>Assigned judges</Text>
-      </Pressable>
-      <Pressable style={styles.button} onPress={() => navigation.navigate('Leaderboard')}>
-        <Text style={styles.buttonText}>Leaderboard</Text>
-      </Pressable>
+      {ITEMS.map((item) => (
+        <Pressable key={item.route} onPress={() => navigation.navigate(item.route as never)}>
+          <Card style={styles.card}>
+            <View style={[styles.iconWrap, { backgroundColor: item.tint.tint }]}>
+              <Feather name={item.icon} size={18} color={item.tint.fg} />
+            </View>
+            <Text style={styles.buttonText}>{item.label}</Text>
+            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+          </Card>
+        </Pressable>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 12 },
-  button: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 18,
+  container: { flex: 1, padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  buttonText: { fontSize: 16, fontWeight: '600', color: '#111827' },
+  buttonText: { ...typography.subheading, fontSize: 16, flex: 1 },
 });

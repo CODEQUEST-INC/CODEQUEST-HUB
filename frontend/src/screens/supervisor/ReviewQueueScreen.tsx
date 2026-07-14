@@ -3,10 +3,12 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { getGroupById } from '../../api/groups';
-import { getSupervisorProposals, ProposalResponse } from '../../api/proposals';
+import { getSupervisorProposals, ProposalResponse, ProposalStatus } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
+import Card from '../../components/Card';
 import StatusBadge from '../../components/StatusBadge';
 import { SupervisorStackParamList } from '../../navigation/types';
+import { AccentSwatch, accents, colors, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<SupervisorStackParamList, 'ReviewQueue'>;
 
@@ -14,6 +16,15 @@ interface Row {
   proposal: ProposalResponse;
   groupLabel: string;
 }
+
+const STATUS_TINT: Record<ProposalStatus, AccentSwatch> = {
+  draft: accents.violet,
+  submitted: accents.violet,
+  under_review: accents.amber,
+  changes_requested: accents.amber,
+  approved: accents.green,
+  rejected: { accent: colors.danger, tint: colors.dangerTint, fg: colors.danger },
+};
 
 export default function ReviewQueueScreen({ navigation }: Props) {
   const { token } = useAuth();
@@ -54,7 +65,7 @@ export default function ReviewQueueScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -74,15 +85,14 @@ export default function ReviewQueueScreen({ navigation }: Props) {
       keyExtractor={(r) => r.proposal.id}
       refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
       renderItem={({ item }) => (
-        <Pressable
-          style={styles.card}
-          onPress={() => navigation.navigate('ReviewDetail', { proposal: item.proposal })}
-        >
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{item.proposal.title}</Text>
-            <StatusBadge status={item.proposal.status} />
-          </View>
-          <Text style={styles.cardMeta}>{item.groupLabel}</Text>
+        <Pressable onPress={() => navigation.navigate('ReviewDetail', { proposal: item.proposal })}>
+          <Card tint={STATUS_TINT[item.proposal.status]}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{item.proposal.title}</Text>
+              <StatusBadge status={item.proposal.status} />
+            </View>
+            <Text style={styles.cardMeta}>{item.groupLabel}</Text>
+          </Card>
         </Pressable>
       )}
       ListEmptyComponent={<Text style={styles.emptyText}>No proposals from your groups yet.</Text>}
@@ -91,17 +101,11 @@ export default function ReviewQueueScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 24, gap: 12 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 16,
-    gap: 4,
-  },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  cardTitle: { fontWeight: '600', fontSize: 15, flexShrink: 1 },
-  cardMeta: { fontSize: 13, color: '#6b7280' },
-  emptyText: { color: '#6b7280', textAlign: 'center', marginTop: 24 },
-  error: { color: '#dc2626', textAlign: 'center' },
+  list: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
+  cardTitle: { ...typography.body, fontWeight: '600', flexShrink: 1 },
+  cardMeta: { ...typography.caption },
+  emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
+  error: { color: colors.danger, textAlign: 'center' },
 });

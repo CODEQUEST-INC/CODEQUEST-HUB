@@ -5,6 +5,9 @@ import { getMyGroup, GroupResponse } from '../api/groups';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useUserNames, userLabel } from '../hooks/useUserNames';
+import Avatar from '../components/Avatar';
+import EmptyState from '../components/EmptyState';
+import { colors, spacing, typography } from '../theme';
 
 export default function GroupWorkspaceScreen() {
   const { token } = useAuth();
@@ -45,7 +48,7 @@ export default function GroupWorkspaceScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -61,7 +64,7 @@ export default function GroupWorkspaceScreen() {
   if (!group) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>You're not currently assigned to a group yet.</Text>
+        <EmptyState icon="users" heading="No group yet" subtext="You're not currently assigned to a group." />
       </View>
     );
   }
@@ -83,14 +86,19 @@ export default function GroupWorkspaceScreen() {
         data={group.members}
         keyExtractor={(m) => m.id}
         refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
-        renderItem={({ item }) => (
-          <View style={styles.memberRow}>
-            <Text style={styles.memberText}>
-              {userLabel(item.userId, names)}
-              {item.userId === group.groupLeaderId ? ' (leader)' : ''}
-            </Text>
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const name = userLabel(item.userId, names);
+          const isLeader = item.userId === group.groupLeaderId;
+          return (
+            <View style={styles.memberRow}>
+              <Avatar name={name} size={36} />
+              <View style={styles.memberTextWrap}>
+                <Text style={styles.memberText}>{name}</Text>
+                {isLeader ? <Text style={styles.leaderLabel}>Group leader</Text> : null}
+              </View>
+            </View>
+          );
+        }}
         ListEmptyComponent={<Text style={styles.emptyText}>No members yet.</Text>}
       />
     </View>
@@ -98,15 +106,24 @@ export default function GroupWorkspaceScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  title: { fontSize: 22, fontWeight: '700' },
-  subtitle: { fontSize: 14, color: '#6b7280', marginTop: 4 },
-  meta: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  sectionHeading: { fontSize: 16, fontWeight: '600', marginTop: 20, marginBottom: 8 },
+  container: { flex: 1, padding: spacing.xxl, backgroundColor: colors.bg },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+  title: { ...typography.heading, fontSize: 20 },
+  subtitle: { ...typography.caption, marginTop: spacing.xs },
+  meta: { ...typography.caption, marginTop: 2 },
+  sectionHeading: { ...typography.subheading, marginTop: spacing.xl, marginBottom: spacing.sm },
   memberList: { flex: 1 },
-  memberRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  memberText: { fontSize: 14 },
-  emptyText: { color: '#6b7280', textAlign: 'center' },
-  error: { color: '#dc2626', textAlign: 'center' },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  memberTextWrap: { flex: 1 },
+  memberText: { ...typography.body, fontWeight: '600' },
+  leaderLabel: { ...typography.caption, color: colors.primaryForeground, marginTop: 1 },
+  emptyText: { color: colors.textMuted, textAlign: 'center' },
+  error: { color: colors.danger, textAlign: 'center' },
 });

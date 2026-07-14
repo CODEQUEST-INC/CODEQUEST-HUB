@@ -1,14 +1,50 @@
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../api/client';
-import { getMyProposal, ProposalResponse } from '../../api/proposals';
+import { getMyProposal, ProposalResponse, ProposalStatus } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
+import EmptyState from '../../components/EmptyState';
 import StatusBadge from '../../components/StatusBadge';
 import { ProposalStackParamList } from '../../navigation/types';
+import { colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<ProposalStackParamList, 'ProposalStatus'>;
+
+const STEPS: { key: ProposalStatus; label: string }[] = [
+  { key: 'draft', label: 'Draft' },
+  { key: 'submitted', label: 'Submitted' },
+  { key: 'under_review', label: 'Under review' },
+  { key: 'approved', label: 'Approved' },
+];
+
+function ProgressSteps({ status }: { status: ProposalStatus }) {
+  const blocked = status === 'rejected' || status === 'changes_requested';
+  const activeIndex = blocked ? 2 : STEPS.findIndex((s) => s.key === status);
+
+  return (
+    <View style={styles.stepsRow}>
+      {STEPS.map((step, i) => {
+        const reached = i <= activeIndex;
+        const isActive = i === activeIndex;
+        const dotColor = isActive && blocked ? colors.danger : reached ? colors.primary : colors.border;
+        return (
+          <React.Fragment key={step.key}>
+            {i > 0 ? (
+              <View style={[styles.stepLine, { backgroundColor: i <= activeIndex ? colors.primary : colors.border }]} />
+            ) : null}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepDot, { backgroundColor: dotColor }]} />
+              <Text style={[styles.stepLabel, reached ? styles.stepLabelActive : null]}>{step.label}</Text>
+            </View>
+          </React.Fragment>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function ProposalStatusScreen({ navigation }: Props) {
   const { token } = useAuth();
@@ -43,7 +79,7 @@ export default function ProposalStatusScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -59,10 +95,13 @@ export default function ProposalStatusScreen({ navigation }: Props) {
   if (!proposal) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>Your group hasn't submitted a proposal yet.</Text>
-        <Pressable style={styles.button} onPress={() => navigation.navigate('ProposalForm', { mode: 'submit' })}>
-          <Text style={styles.buttonText}>Submit proposal</Text>
-        </Pressable>
+        <EmptyState
+          icon="file-plus"
+          heading="No proposal yet"
+          subtext="Your group hasn't submitted a proposal yet."
+          ctaLabel="Submit proposal"
+          onPressCta={() => navigation.navigate('ProposalForm', { mode: 'submit' })}
+        />
       </View>
     );
   }
@@ -71,6 +110,8 @@ export default function ProposalStatusScreen({ navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <ProgressSteps status={proposal.status} />
+
       <StatusBadge status={proposal.status} />
       <Text style={styles.title}>{proposal.title}</Text>
       <Text style={styles.meta}>Version {proposal.currentVersion}</Text>
@@ -88,6 +129,7 @@ export default function ProposalStatusScreen({ navigation }: Props) {
         style={styles.secondaryButton}
         onPress={() => navigation.navigate('ProposalHistory', { proposalId: proposal.id })}
       >
+        <Feather name="clock" size={15} color={colors.primary} />
         <Text style={styles.secondaryButtonText}>View history</Text>
       </Pressable>
 
@@ -104,29 +146,38 @@ export default function ProposalStatusScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 8 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
-  title: { fontSize: 22, fontWeight: '700', marginTop: 8 },
-  meta: { fontSize: 13, color: '#6b7280' },
-  sectionHeading: { fontSize: 15, fontWeight: '600', marginTop: 16 },
-  body: { fontSize: 14, color: '#374151' },
-  emptyText: { color: '#6b7280', textAlign: 'center' },
-  error: { color: '#dc2626', textAlign: 'center' },
+  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.xl },
+  stepsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  stepItem: { alignItems: 'center', width: 64 },
+  stepDot: { width: 12, height: 12, borderRadius: radius.pill },
+  stepLine: { flex: 1, height: 2, marginBottom: 18 },
+  stepLabel: { ...typography.caption, fontSize: 10.5, marginTop: spacing.xs, textAlign: 'center' },
+  stepLabelActive: { color: colors.text, fontWeight: '700' },
+  title: { ...typography.heading, fontSize: 20, marginTop: spacing.sm },
+  meta: { ...typography.caption },
+  sectionHeading: { ...typography.subheading, fontSize: 15, marginTop: spacing.lg },
+  body: { ...typography.body, color: colors.textMuted },
+  emptyText: { color: colors.textMuted, textAlign: 'center' },
+  error: { color: colors.danger, textAlign: 'center' },
   button: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: spacing.lg,
   },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
   secondaryButton: {
-    borderWidth: 1,
-    borderColor: '#2563eb',
-    borderRadius: 8,
-    padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginTop: spacing.lg,
   },
-  secondaryButtonText: { color: '#2563eb', fontWeight: '600' },
+  secondaryButtonText: { color: colors.primary, fontWeight: '600' },
 });

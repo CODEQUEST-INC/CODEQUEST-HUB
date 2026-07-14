@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
@@ -6,15 +7,18 @@ import { ApiError } from '../../api/client';
 import { getMyGroup } from '../../api/groups';
 import { listTasksForGroup, TaskResponse, TaskStatus, updateTaskStatus } from '../../api/tasks';
 import { useAuth } from '../../auth/AuthContext';
+import Card from '../../components/Card';
+import EmptyState from '../../components/EmptyState';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { TaskStackParamList } from '../../navigation/types';
+import { AccentSwatch, accents, colors, radius, spacing, typography } from '../../theme';
 
 type Props = NativeStackScreenProps<TaskStackParamList, 'TaskBoard'>;
 
-const SECTIONS: { status: TaskStatus; label: string }[] = [
-  { status: 'todo', label: 'To do' },
-  { status: 'in_progress', label: 'In progress' },
-  { status: 'done', label: 'Done' },
+const COLUMNS: { status: TaskStatus; label: string; tint: AccentSwatch; icon: React.ComponentProps<typeof Feather>['name'] }[] = [
+  { status: 'todo', label: 'To do', tint: accents.coral, icon: 'circle' },
+  { status: 'in_progress', label: 'In progress', tint: accents.amber, icon: 'loader' },
+  { status: 'done', label: 'Done', tint: accents.green, icon: 'check-circle' },
 ];
 
 const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
@@ -72,7 +76,7 @@ export default function TaskBoardScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -80,90 +84,116 @@ export default function TaskBoardScreen({ navigation }: Props) {
   if (!groupId) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>You're not currently assigned to a group yet.</Text>
+        <EmptyState icon="clipboard" heading="No group yet" subtext="You're not currently assigned to a group." />
       </View>
     );
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
-    >
+    <View style={styles.screen}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {SECTIONS.map((section) => {
-        const sectionTasks = tasks.filter((t) => t.status === section.status);
-        return (
-          <View key={section.status} style={styles.section}>
-            <Text style={styles.sectionHeading}>
-              {section.label} ({sectionTasks.length})
-            </Text>
-            {sectionTasks.length === 0 ? <Text style={styles.emptySection}>Nothing here.</Text> : null}
-            {sectionTasks.map((task) => (
-              <Pressable
-                key={task.id}
-                style={styles.card}
-                onPress={() => navigation.navigate('TaskForm', { mode: 'edit', task })}
-              >
-                <Text style={styles.cardTitle}>{task.title}</Text>
-                {task.dueDate ? <Text style={styles.cardMeta}>Due {task.dueDate}</Text> : null}
-                {task.assigneeId ? (
-                  <Text style={styles.cardMeta}>Assigned to {userLabel(task.assigneeId, names)}</Text>
-                ) : (
-                  <Text style={styles.cardMeta}>Unassigned</Text>
-                )}
-                {NEXT_STATUS[task.status] ? (
-                  <Pressable style={styles.advanceButton} onPress={() => advanceStatus(task)}>
-                    <Text style={styles.advanceButtonText}>
-                      Move to {SECTIONS.find((s) => s.status === NEXT_STATUS[task.status])?.label}
-                    </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.board}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
+      >
+        {COLUMNS.map((column) => {
+          const columnTasks = tasks.filter((t) => t.status === column.status);
+          return (
+            <View key={column.status} style={[styles.column, { backgroundColor: column.tint.tint }]}>
+              <View style={styles.columnHeader}>
+                <Feather name={column.icon} size={14} color={column.tint.fg} />
+                <Text style={[styles.columnTitle, { color: column.tint.fg }]}>{column.label}</Text>
+                <View style={[styles.countBadge, { backgroundColor: column.tint.accent }]}>
+                  <Text style={styles.countText}>{columnTasks.length}</Text>
+                </View>
+              </View>
+
+              <ScrollView style={styles.columnList} showsVerticalScrollIndicator={false}>
+                {columnTasks.length === 0 ? <Text style={styles.emptySection}>Nothing here.</Text> : null}
+                {columnTasks.map((task) => (
+                  <Pressable key={task.id} onPress={() => navigation.navigate('TaskForm', { mode: 'edit', task })}>
+                    <Card tint={column.tint} style={styles.taskCard}>
+                      <Text style={styles.cardTitle}>{task.title}</Text>
+                      {task.dueDate ? (
+                        <View style={styles.metaRow}>
+                          <Feather name="calendar" size={11} color={colors.textMuted} />
+                          <Text style={styles.cardMeta}>{task.dueDate}</Text>
+                        </View>
+                      ) : null}
+                      <View style={styles.metaRow}>
+                        <Feather name="user" size={11} color={colors.textMuted} />
+                        <Text style={styles.cardMeta}>
+                          {task.assigneeId ? userLabel(task.assigneeId, names) : 'Unassigned'}
+                        </Text>
+                      </View>
+                      {NEXT_STATUS[task.status] ? (
+                        <Pressable
+                          style={[styles.advanceButton, { backgroundColor: column.tint.accent }]}
+                          onPress={() => advanceStatus(task)}
+                        >
+                          <Text style={styles.advanceButtonText}>
+                            Move to {COLUMNS.find((c) => c.status === NEXT_STATUS[task.status])?.label}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </Card>
                   </Pressable>
-                ) : null}
-              </Pressable>
-            ))}
-          </View>
-        );
-      })}
+                ))}
+              </ScrollView>
+            </View>
+          );
+        })}
+      </ScrollView>
 
       <Pressable style={styles.newButton} onPress={() => navigation.navigate('TaskForm', { mode: 'create' })}>
-        <Text style={styles.newButtonText}>+ New task</Text>
+        <Feather name="plus" size={16} color={colors.textOnPrimary} />
+        <Text style={styles.newButtonText}>New task</Text>
       </Pressable>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 8 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  section: { marginBottom: 20 },
-  sectionHeading: { fontSize: 15, fontWeight: '600', marginBottom: 8 },
-  emptySection: { color: '#9ca3af', fontSize: 13 },
-  card: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 8,
-    gap: 2,
+  screen: { flex: 1, backgroundColor: colors.bg },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+  board: { padding: spacing.lg, gap: spacing.md },
+  column: {
+    width: 232,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    maxHeight: '100%',
   },
-  cardTitle: { fontWeight: '600', fontSize: 15 },
-  cardMeta: { fontSize: 12, color: '#6b7280' },
+  columnHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+  columnTitle: { ...typography.label, flex: 1 },
+  countBadge: { minWidth: 20, height: 20, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  countText: { color: colors.textOnPrimary, fontSize: 11, fontWeight: '700' },
+  columnList: { maxHeight: 520 },
+  emptySection: { color: colors.textMuted, fontSize: 13 },
+  taskCard: { marginBottom: spacing.sm, backgroundColor: colors.surface },
+  cardTitle: { ...typography.body, fontWeight: '600' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  cardMeta: { ...typography.caption },
   advanceButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 6,
-    paddingVertical: 8,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.xs,
   },
-  advanceButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  advanceButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 12.5 },
   newButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    margin: spacing.lg,
+    marginTop: 0,
   },
-  newButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  emptyText: { color: '#6b7280', textAlign: 'center' },
-  error: { color: '#dc2626', textAlign: 'center', marginBottom: 8 },
+  newButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+  error: { color: colors.danger, textAlign: 'center', padding: spacing.md },
 });

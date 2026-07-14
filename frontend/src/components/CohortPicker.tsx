@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Cohort, listCohorts } from '../api/cohorts';
 import { useAuth } from '../auth/AuthContext';
+import { colors, radius, spacing } from '../theme';
 
 interface Props {
   selectedCohortId: string | null;
@@ -51,17 +52,17 @@ export default function CohortPicker({ selectedCohortId, onSelect }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8, paddingVertical: 8 },
+  row: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.sm },
   chip: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
-  chipSelected: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  chipText: { color: '#374151' },
-  chipTextSelected: { color: '#fff' },
-  empty: { padding: 16 },
-  emptyText: { color: '#6b7280' },
+  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.text },
+  chipTextSelected: { color: colors.textOnPrimary },
+  empty: { padding: spacing.lg },
+  emptyText: { color: colors.textMuted },
 });

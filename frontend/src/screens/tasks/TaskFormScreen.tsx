@@ -6,6 +6,7 @@ import { assignTask, createTask, deleteTask, updateTask } from '../../api/tasks'
 import { useAuth } from '../../auth/AuthContext';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { TaskStackParamList } from '../../navigation/types';
+import { colors, radius, spacing } from '../../theme';
 
 type Props = NativeStackScreenProps<TaskStackParamList, 'TaskForm'>;
 
@@ -79,7 +80,13 @@ export default function TaskFormScreen({ route, navigation }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.label}>Title</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Task title" />
+      <TextInput
+        style={styles.input}
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Task title"
+        placeholderTextColor={colors.textMuted}
+      />
 
       <Text style={styles.label}>Description</Text>
       <TextInput
@@ -87,11 +94,18 @@ export default function TaskFormScreen({ route, navigation }: Props) {
         value={description}
         onChangeText={setDescription}
         placeholder="Optional details"
+        placeholderTextColor={colors.textMuted}
         multiline
       />
 
       <Text style={styles.label}>Due date</Text>
-      <TextInput style={styles.input} value={dueDate} onChangeText={setDueDate} placeholder="YYYY-MM-DD" />
+      <TextInput
+        style={styles.input}
+        value={dueDate}
+        onChangeText={setDueDate}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor={colors.textMuted}
+      />
 
       <Text style={styles.label}>Assignee</Text>
       <View style={styles.chipRow}>
@@ -117,7 +131,11 @@ export default function TaskFormScreen({ route, navigation }: Props) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable style={styles.button} onPress={onSave} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save task</Text>}
+        {submitting ? (
+          <ActivityIndicator color={colors.textOnPrimary} />
+        ) : (
+          <Text style={styles.buttonText}>Save task</Text>
+        )}
       </Pressable>
 
       {mode === 'edit' ? (
@@ -130,43 +148,44 @@ export default function TaskFormScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 8 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginTop: 8 },
+  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: spacing.sm },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
     fontSize: 16,
+    backgroundColor: colors.surface,
   },
   multiline: { minHeight: 70, textAlignVertical: 'top' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
-  chipSelected: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  chipText: { color: '#374151' },
-  chipTextSelected: { color: '#fff' },
+  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.text },
+  chipTextSelected: { color: colors.textOnPrimary },
   button: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: spacing.xl,
   },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
   deleteButton: {
     borderWidth: 1,
-    borderColor: '#dc2626',
-    borderRadius: 8,
-    padding: 14,
+    borderColor: colors.danger,
+    borderRadius: radius.md,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: spacing.md,
   },
-  deleteButtonText: { color: '#dc2626', fontWeight: '600' },
-  error: { color: '#dc2626' },
+  deleteButtonText: { color: colors.danger, fontWeight: '600' },
+  error: { color: colors.danger },
 });

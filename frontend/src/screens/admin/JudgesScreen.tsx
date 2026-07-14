@@ -3,8 +3,11 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { assignJudge, Judge, listJudges, removeJudge } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
+import Avatar from '../../components/Avatar';
+import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
+import { colors, radius, spacing, typography } from '../../theme';
 
 export default function JudgesScreen() {
   const { token } = useAuth();
@@ -62,60 +65,64 @@ export default function JudgesScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
-      {loading ? <ActivityIndicator /> : null}
+      {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {judges.map((j) => (
-        <View key={j.id} style={styles.card}>
-          <Text style={styles.cardTitle}>{userLabel(j.userId, names)}</Text>
-          <Pressable style={styles.smallDangerButton} onPress={() => onRemove(j.id)}>
-            <Text style={styles.smallDangerButtonText}>Remove</Text>
-          </Pressable>
-        </View>
-      ))}
+      {judges.map((j) => {
+        const name = userLabel(j.userId, names);
+        return (
+          <Card key={j.id} style={styles.judgeCard}>
+            <Avatar name={name} size={32} />
+            <Text style={styles.cardTitle}>{name}</Text>
+            <Pressable style={styles.smallDangerButton} onPress={() => onRemove(j.id)}>
+              <Text style={styles.smallDangerButtonText}>Remove</Text>
+            </Pressable>
+          </Card>
+        );
+      })}
       {judges.length === 0 && !loading ? <Text style={styles.emptyText}>No judges assigned yet.</Text> : null}
 
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.cardTitle}>Assign judge</Text>
         <Text style={styles.hint}>Enter the user's ID (UUID) — there's no user search yet.</Text>
-        <TextInput style={styles.input} value={newUserId} onChangeText={setNewUserId} placeholder="User ID" />
+        <TextInput
+          style={styles.input}
+          value={newUserId}
+          onChangeText={setNewUserId}
+          placeholder="User ID"
+          placeholderTextColor={colors.textMuted}
+        />
         <Pressable style={styles.button} onPress={onAssign}>
           <Text style={styles.buttonText}>Assign</Text>
         </Pressable>
-      </View>
+      </Card>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, gap: 12 },
-  card: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    padding: 16,
-    gap: 8,
-  },
-  cardTitle: { fontWeight: '600', fontSize: 14 },
-  hint: { fontSize: 12, color: '#6b7280' },
+  container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+  judgeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  cardTitle: { ...typography.body, fontWeight: '600', flex: 1 },
+  hint: { ...typography.caption },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.md,
     fontSize: 15,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
-  button: { backgroundColor: '#2563eb', borderRadius: 8, padding: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600' },
+  button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
+  buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
   smallDangerButton: {
     borderWidth: 1,
-    borderColor: '#dc2626',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    alignSelf: 'flex-start',
+    borderColor: colors.danger,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
-  smallDangerButtonText: { color: '#dc2626', fontWeight: '600', fontSize: 13 },
-  emptyText: { color: '#6b7280', textAlign: 'center' },
-  error: { color: '#dc2626' },
+  smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
+  emptyText: { color: colors.textMuted, textAlign: 'center' },
+  error: { color: colors.danger },
 });
