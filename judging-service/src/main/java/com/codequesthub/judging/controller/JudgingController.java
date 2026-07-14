@@ -107,10 +107,9 @@ public class JudgingController {
         return ResponseEntity.ok(Map.of("data", scorecards));
     }
 
-    // ---- leaderboard (admin) ----
+    // ---- leaderboard (any authenticated user) ----
 
     @GetMapping("/leaderboard")
-    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<?> getLeaderboard(@RequestParam UUID cohortId) {
         List<LeaderboardEntry> leaderboard = judgingService.getLeaderboard(cohortId);
         return ResponseEntity.ok(Map.of("data", leaderboard));

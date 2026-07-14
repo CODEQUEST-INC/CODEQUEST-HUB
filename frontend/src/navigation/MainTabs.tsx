@@ -4,6 +4,7 @@ import React from 'react';
 import { useAuth } from '../auth/AuthContext';
 import DashboardScreen from '../screens/DashboardScreen';
 import GroupWorkspaceScreen from '../screens/GroupWorkspaceScreen';
+import LeaderboardScreen from '../screens/admin/LeaderboardScreen';
 import ScorecardScreen from '../screens/judge/ScorecardScreen';
 import { colors } from '../theme';
 import AdminStack from './AdminStack';
@@ -64,6 +65,15 @@ export default function MainTabs() {
               tabBarIcon: tabIcon('checkbox-outline', 'checkbox'),
             }}
           />
+          <Tab.Screen
+            name="Leaderboard"
+            component={LeaderboardScreen}
+            options={{
+              title: 'Leaderboard',
+              tabBarActiveTintColor: colors.accents.amber.fg,
+              tabBarIcon: tabIcon('trophy-outline', 'trophy'),
+            }}
+          />
         </>
       ) : null}
       {user?.role === 'supervisor' ? (
@@ -78,15 +88,17 @@ export default function MainTabs() {
           }}
         />
       ) : null}
-      <Tab.Screen
-        name="Judge"
-        component={ScorecardScreen}
-        options={{
-          title: 'Judge',
-          tabBarActiveTintColor: colors.accents.amber.fg,
-          tabBarIcon: tabIcon('trophy-outline', 'trophy'),
-        }}
-      />
+      {user?.role !== 'student' ? (
+        <Tab.Screen
+          name="Judge"
+          component={ScorecardScreen}
+          options={{
+            title: 'Judge',
+            tabBarActiveTintColor: colors.accents.amber.fg,
+            tabBarIcon: tabIcon('trophy-outline', 'trophy'),
+          }}
+        />
+      ) : null}
       {user?.role === 'admin' ? (
         <Tab.Screen
           name="Admin"

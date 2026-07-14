@@ -13,6 +13,7 @@ export type MainTabsParamList = {
   ReviewQueue: undefined;
   Tasks: undefined;
   Judge: undefined;
+  Leaderboard: undefined;
   Admin: undefined;
 };
 
