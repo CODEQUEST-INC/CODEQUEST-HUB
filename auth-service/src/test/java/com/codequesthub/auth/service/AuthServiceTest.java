@@ -1,5 +1,6 @@
 package com.codequesthub.auth.service;
 
+import com.codequesthub.auth.dto.UserSearchResult;
 import com.codequesthub.auth.dto.UserSummaryResponse;
 import com.codequesthub.auth.entity.User;
 import com.codequesthub.auth.entity.UserRole;
@@ -8,12 +9,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -72,5 +78,39 @@ class AuthServiceTest {
         List<UserSummaryResponse> result = authService().lookupUsers(List.of());
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void searchUsers_returnsEmptyForQueriesUnderTwoChars() {
+        List<UserSearchResult> result = authService().searchUsers("a", null);
+
+        assertThat(result).isEmpty();
+        verify(userRepo, never()).search(any(), any());
+        verify(userRepo, never()).searchByRole(any(), any(), any());
+    }
+
+    @Test
+    void searchUsers_withoutRoleFilter_callsPlainSearch() {
+        UUID id = UUID.randomUUID();
+        when(userRepo.search(eq("ama"), any(Pageable.class))).thenReturn(List.of(userWith(id, "Ama Boateng")));
+
+        List<UserSearchResult> result = authService().searchUsers("ama", null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(id);
+        assertThat(result.get(0).getRole()).isEqualTo("student");
+        verify(userRepo, never()).searchByRole(any(), any(), any());
+    }
+
+    @Test
+    void searchUsers_withRoleFilter_callsSearchByRole() {
+        UUID id = UUID.randomUUID();
+        when(userRepo.searchByRole(eq("ama"), eq(UserRole.supervisor), any(Pageable.class)))
+            .thenReturn(List.of(userWith(id, "Ama Boateng")));
+
+        List<UserSearchResult> result = authService().searchUsers("ama", UserRole.supervisor);
+
+        assertThat(result).hasSize(1);
+        verify(userRepo, never()).search(any(), any());
     }
 }

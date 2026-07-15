@@ -61,6 +61,32 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("data", authService.lookupUsers(ids)));
     }
 
+    // Admin-only — every caller of this (assign judge/member/supervisor) is an
+    // admin-gated action, and unlike /users (bulk lookup by already-known IDs)
+    // this lets a caller enumerate the directory by typing letters.
+    @GetMapping("/users/search")
+    public ResponseEntity<?> searchUsers(@RequestParam String q,
+                                         @RequestParam(required = false) String role,
+                                         @RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+        if (!"admin".equals(claims.get("role", String.class))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "forbidden", "message", "Admin access required"));
+        }
+        com.codequesthub.auth.entity.UserRole roleFilter = null;
+        if (role != null && !role.isBlank()) {
+            try {
+                roleFilter = com.codequesthub.auth.entity.UserRole.valueOf(role);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "bad_request", "message", "Unknown role: " + role));
+            }
+        }
+        return ResponseEntity.ok(Map.of("data", authService.searchUsers(q, roleFilter)));
+    }
+
     private boolean requireValidToken(String authHeader) {
         return authHeader != null && authHeader.startsWith("Bearer ") && jwtUtil.isValid(authHeader.substring(7));
     }

@@ -2,8 +2,10 @@ package com.codequesthub.auth.service;
 
 import com.codequesthub.auth.dto.*;
 import com.codequesthub.auth.entity.User;
+import com.codequesthub.auth.entity.UserRole;
 import com.codequesthub.auth.repository.UserRepository;
 import com.codequesthub.common.security.JwtUtil;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -72,6 +74,21 @@ public class AuthService {
     public java.util.List<UserSummaryResponse> lookupUsers(java.util.List<java.util.UUID> ids) {
         return userRepo.findAllById(ids).stream()
             .map(UserSummaryResponse::from)
+            .toList();
+    }
+
+    // Backs an admin type-ahead picker (assign judge/member/supervisor by name
+    // instead of pasting a UUID) — blank/short queries return nothing rather
+    // than the whole directory.
+    public java.util.List<UserSearchResult> searchUsers(String q, UserRole role) {
+        if (q == null || q.trim().length() < 2) {
+            return java.util.List.of();
+        }
+        String trimmed = q.trim();
+        var page = PageRequest.of(0, 20);
+        var results = role != null ? userRepo.searchByRole(trimmed, role, page) : userRepo.search(trimmed, page);
+        return results.stream()
+            .map(UserSearchResult::from)
             .toList();
     }
 }
