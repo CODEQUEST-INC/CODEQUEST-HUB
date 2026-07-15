@@ -1,11 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { UserSearchResult } from '../../api/users';
 import { assignJudge, Judge, listJudges, removeJudge } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
+import UserPicker from '../../components/UserPicker';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { colors, radius, spacing, typography } from '../../theme';
 
@@ -15,18 +17,25 @@ export default function JudgesScreen() {
   const [judges, setJudges] = useState<Judge[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newUserId, setNewUserId] = useState('');
+
+  // Guards against an in-flight request for a since-abandoned cohort
+  // resolving after a newer one and clobbering it with stale data.
+  const requestIdRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!token || !cohortId) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      setJudges(await listJudges(cohortId, token));
+      const data = await listJudges(cohortId, token);
+      if (requestIdRef.current === requestId) setJudges(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load judges');
+      if (requestIdRef.current === requestId) {
+        setError(e instanceof Error ? e.message : 'Failed to load judges');
+      }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [token, cohortId]);
 
@@ -38,12 +47,11 @@ export default function JudgesScreen() {
 
   const names = useUserNames(judges.map((j) => j.userId));
 
-  const onAssign = async () => {
-    if (!token || !cohortId || !newUserId.trim()) return;
+  const onAssign = async (user: UserSearchResult) => {
+    if (!token || !cohortId) return;
     setError(null);
     try {
-      await assignJudge(cohortId, newUserId.trim(), token);
-      setNewUserId('');
+      await assignJudge(cohortId, user.id, token);
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to assign judge');
@@ -84,17 +92,7 @@ export default function JudgesScreen() {
 
       <Card>
         <Text style={styles.cardTitle}>Assign judge</Text>
-        <Text style={styles.hint}>Enter the user's ID (UUID) — there's no user search yet.</Text>
-        <TextInput
-          style={styles.input}
-          value={newUserId}
-          onChangeText={setNewUserId}
-          placeholder="User ID"
-          placeholderTextColor={colors.textMuted}
-        />
-        <Pressable style={styles.button} onPress={onAssign}>
-          <Text style={styles.buttonText}>Assign</Text>
-        </Pressable>
+        <UserPicker onSelect={onAssign} placeholder="Search by name or email" />
       </Card>
     </ScrollView>
   );
@@ -104,17 +102,6 @@ const styles = StyleSheet.create({
   container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
   judgeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   cardTitle: { ...typography.body, fontWeight: '600', flex: 1 },
-  hint: { ...typography.caption },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    fontSize: 15,
-    backgroundColor: colors.surface,
-  },
-  button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
   smallDangerButton: {
     borderWidth: 1,
     borderColor: colors.danger,

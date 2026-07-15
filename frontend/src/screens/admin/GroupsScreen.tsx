@@ -1,11 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { assignGroupMembers, createGroup, GroupResponse, listGroupsByCohort, setGroupLeader } from '../../api/groups';
+import { UserSearchResult } from '../../api/users';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
+import UserPicker from '../../components/UserPicker';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { colors, radius, spacing, typography } from '../../theme';
 
@@ -18,20 +20,26 @@ export default function GroupsScreen() {
 
   const [newNumber, setNewNumber] = useState('');
   const [newName, setNewName] = useState('');
-  const [newSupervisorId, setNewSupervisorId] = useState('');
+  const [newSupervisor, setNewSupervisor] = useState<UserSearchResult | null>(null);
 
-  const [addMemberIds, setAddMemberIds] = useState<Record<string, string>>({});
+  // Guards against an in-flight request for a since-abandoned cohort
+  // resolving after a newer one and clobbering it with stale data.
+  const requestIdRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!token || !cohortId) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      setGroups(await listGroupsByCohort(cohortId, token));
+      const data = await listGroupsByCohort(cohortId, token);
+      if (requestIdRef.current === requestId) setGroups(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load groups');
+      if (requestIdRef.current === requestId) {
+        setError(e instanceof Error ? e.message : 'Failed to load groups');
+      }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [token, cohortId]);
 
@@ -61,34 +69,27 @@ export default function GroupsScreen() {
           cohortId,
           groupNumber,
           name: newName.trim() || undefined,
-          supervisorId: newSupervisorId.trim() || undefined,
+          supervisorId: newSupervisor?.id,
         },
         token
       );
       setNewNumber('');
       setNewName('');
-      setNewSupervisorId('');
+      setNewSupervisor(null);
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create group');
     }
   };
 
-  const onAddMembers = async (groupId: string) => {
+  const onAddMember = async (groupId: string, user: UserSearchResult) => {
     if (!token) return;
-    const raw = addMemberIds[groupId] ?? '';
-    const userIds = raw
-      .split(/[\s,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (userIds.length === 0) return;
     setError(null);
     try {
-      await assignGroupMembers(groupId, userIds, token);
-      setAddMemberIds((prev) => ({ ...prev, [groupId]: '' }));
+      await assignGroupMembers(groupId, [user.id], token);
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add members');
+      setError(e instanceof Error ? e.message : 'Failed to add member');
     }
   };
 
@@ -138,17 +139,8 @@ export default function GroupsScreen() {
           {g.members.length === 0 ? <Text style={styles.hint}>No members yet.</Text> : null}
           {g.members.length > 0 ? <Text style={styles.hint}>Tap a member to make them group leader.</Text> : null}
 
-          <Text style={styles.hint}>Add members — paste user IDs (comma or space separated).</Text>
-          <TextInput
-            style={styles.input}
-            value={addMemberIds[g.id] ?? ''}
-            onChangeText={(v) => setAddMemberIds((prev) => ({ ...prev, [g.id]: v }))}
-            placeholder="User IDs"
-            placeholderTextColor={colors.textMuted}
-          />
-          <Pressable style={styles.smallButton} onPress={() => onAddMembers(g.id)}>
-            <Text style={styles.smallButtonText}>Add members</Text>
-          </Pressable>
+          <Text style={styles.hint}>Add a member</Text>
+          <UserPicker onSelect={(user) => onAddMember(g.id, user)} placeholder="Search by name or email" />
         </Card>
       ))}
       {groups.length === 0 && !loading && cohortId ? (
@@ -173,14 +165,18 @@ export default function GroupsScreen() {
             placeholder="Name (optional)"
             placeholderTextColor={colors.textMuted}
           />
-          <Text style={styles.hint}>Supervisor ID (optional) — there's no user search yet.</Text>
-          <TextInput
-            style={styles.input}
-            value={newSupervisorId}
-            onChangeText={setNewSupervisorId}
-            placeholder="Supervisor user ID"
-            placeholderTextColor={colors.textMuted}
-          />
+          <Text style={styles.hint}>Supervisor (optional)</Text>
+          {newSupervisor ? (
+            <View style={styles.selectedRow}>
+              <Avatar name={newSupervisor.fullName} size={28} />
+              <Text style={styles.selectedName}>{newSupervisor.fullName}</Text>
+              <Pressable onPress={() => setNewSupervisor(null)}>
+                <Text style={styles.changeLink}>Change</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <UserPicker onSelect={setNewSupervisor} roleFilter="supervisor" placeholder="Search supervisors" />
+          )}
           <Pressable style={styles.button} onPress={onCreate}>
             <Text style={styles.buttonText}>Create</Text>
           </Pressable>
@@ -207,6 +203,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   memberChipText: { ...typography.caption, color: colors.text },
+  selectedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  selectedName: { ...typography.body, fontWeight: '600', flex: 1 },
+  changeLink: { ...typography.caption, color: colors.primary, fontWeight: '600' },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -217,14 +225,6 @@ const styles = StyleSheet.create({
   },
   button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
   buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
-  smallButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    alignSelf: 'flex-start',
-  },
-  smallButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 13 },
   emptyText: { color: colors.textMuted, textAlign: 'center' },
   error: { color: colors.danger },
 });
