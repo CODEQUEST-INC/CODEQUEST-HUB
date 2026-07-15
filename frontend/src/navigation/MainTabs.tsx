@@ -9,6 +9,7 @@ import ScorecardScreen from '../screens/judge/ScorecardScreen';
 import { colors } from '../theme';
 import AdminStack from './AdminStack';
 import ProposalStack from './ProposalStack';
+import ShowcaseStack from './ShowcaseStack';
 import SupervisorStack from './SupervisorStack';
 import TaskStack from './TaskStack';
 import { MainTabsParamList } from './types';
@@ -99,6 +100,16 @@ export default function MainTabs() {
           }}
         />
       ) : null}
+      <Tab.Screen
+        name="Showcase"
+        component={ShowcaseStack}
+        options={{
+          headerShown: false,
+          title: 'Showcase',
+          tabBarActiveTintColor: colors.accents.pink.fg,
+          tabBarIcon: tabIcon('image-outline', 'image'),
+        }}
+      />
       {user?.role === 'admin' ? (
         <Tab.Screen
           name="Admin"

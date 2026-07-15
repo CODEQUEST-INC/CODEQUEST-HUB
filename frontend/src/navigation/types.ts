@@ -1,4 +1,5 @@
 import { ProposalResponse } from '../api/proposals';
+import { ShowcaseEntryResponse } from '../api/showcase';
 import { TaskResponse } from '../api/tasks';
 
 export type AuthStackParamList = {
@@ -14,6 +15,7 @@ export type MainTabsParamList = {
   Tasks: undefined;
   Judge: undefined;
   Leaderboard: undefined;
+  Showcase: undefined;
   Admin: undefined;
 };
 
@@ -38,4 +40,10 @@ export type AdminStackParamList = {
   Criteria: undefined;
   Judges: undefined;
   Leaderboard: undefined;
+};
+
+export type ShowcaseStackParamList = {
+  ShowcaseGallery: undefined;
+  ShowcaseDetail: { entry: ShowcaseEntryResponse };
+  ShowcaseEdit: undefined;
 };

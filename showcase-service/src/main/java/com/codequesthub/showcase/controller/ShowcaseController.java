@@ -3,11 +3,11 @@ package com.codequesthub.showcase.controller;
 import com.codequesthub.showcase.dto.ShowcaseEntryResponse;
 import com.codequesthub.showcase.dto.UpsertShowcaseRequest;
 import com.codequesthub.showcase.service.ShowcaseService;
+import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,11 +51,13 @@ public class ShowcaseController {
         return ResponseEntity.ok(Map.of("data", entry));
     }
 
-    // admin — unpublish/moderate
+    // a member of the group (take down their own entry) or an admin (moderation)
     @DeleteMapping("/{groupId}")
-    @PreAuthorize("hasRole('admin')")
-    public ResponseEntity<?> deleteEntry(@PathVariable UUID groupId) {
-        showcaseService.deleteEntry(groupId);
+    public ResponseEntity<?> deleteEntry(@PathVariable UUID groupId, Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        Claims claims = (Claims) auth.getDetails();
+        String role = claims.get("role", String.class);
+        showcaseService.deleteEntry(groupId, userId, role);
         return ResponseEntity.noContent().build();
     }
 

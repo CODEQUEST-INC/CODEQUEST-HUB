@@ -124,7 +124,10 @@ public class ShowcaseService {
     }
 
     @Transactional
-    public void deleteEntry(UUID groupId) {
+    public void deleteEntry(UUID groupId, UUID userId, String role) {
+        if (!"admin".equals(role) && !memberRepo.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group");
+        }
         ShowcaseEntry entry = entryRepo.findByGroupId(groupId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No showcase entry for this group"));
         entryRepo.delete(entry);
