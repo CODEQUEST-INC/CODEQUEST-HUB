@@ -14,6 +14,8 @@ const ITEMS: {
   icon: React.ComponentProps<typeof Feather>['name'];
   tint: AccentSwatch;
 }[] = [
+  { label: 'Cohorts', route: 'Cohorts', icon: 'calendar', tint: accents.coral },
+  { label: 'Groups', route: 'Groups', icon: 'grid', tint: accents.green },
   { label: 'Judging criteria', route: 'Criteria', icon: 'sliders', tint: accents.violet },
   { label: 'Assigned judges', route: 'Judges', icon: 'users', tint: accents.teal },
   { label: 'Leaderboard', route: 'Leaderboard', icon: 'award', tint: accents.amber },

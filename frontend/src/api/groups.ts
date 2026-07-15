@@ -29,3 +29,34 @@ export function getGroupById(groupId: string, token: string): Promise<GroupRespo
 export function listGroupsByCohort(cohortId: string, token: string): Promise<GroupResponse[]> {
   return request<GroupResponse[]>(`/api/groups?cohortId=${cohortId}`, { token });
 }
+
+export interface CreateGroupRequest {
+  cohortId: string;
+  groupNumber: number;
+  name?: string;
+  supervisorId?: string;
+}
+
+export function createGroup(req: CreateGroupRequest, token: string): Promise<GroupResponse> {
+  return request<GroupResponse>('/api/groups', { method: 'POST', body: req, token });
+}
+
+export function assignGroupMembers(
+  groupId: string,
+  userIds: string[],
+  token: string
+): Promise<{ added: number }> {
+  return request<{ added: number }>(`/api/groups/${groupId}/members`, {
+    method: 'POST',
+    body: { userIds },
+    token,
+  });
+}
+
+export function setGroupLeader(groupId: string, userId: string, token: string): Promise<GroupResponse> {
+  return request<GroupResponse>(`/api/groups/${groupId}/leader`, {
+    method: 'PATCH',
+    body: { userId },
+    token,
+  });
+}

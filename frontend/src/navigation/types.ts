@@ -37,6 +37,8 @@ export type TaskStackParamList = {
 
 export type AdminStackParamList = {
   AdminHub: undefined;
+  Cohorts: undefined;
+  Groups: undefined;
   Criteria: undefined;
   Judges: undefined;
   Leaderboard: undefined;
