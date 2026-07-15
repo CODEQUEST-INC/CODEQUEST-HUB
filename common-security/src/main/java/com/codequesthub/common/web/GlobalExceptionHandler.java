@@ -1,6 +1,7 @@
 package com.codequesthub.common.web;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -43,6 +44,15 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
         ApiError body = new ApiError(status.value(), status.getReasonPhrase(), ex.getReason(), request.getRequestURI());
         return ResponseEntity.status(status).body(body);
+    }
+
+    // e.g. assigning a group member/supervisor/judge by a user ID that doesn't exist —
+    // the FK violation would otherwise surface as an unhandled 500.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            "Request references data that doesn't exist or violates a constraint", request.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

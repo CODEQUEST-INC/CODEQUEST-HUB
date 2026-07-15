@@ -21,6 +21,10 @@
         <!-- Compiled against, supplied at runtime by whichever service depends on this jar. -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security</artifactId><scope>provided</scope></dependency>
+        <!-- Only for DataIntegrityViolationException in GlobalExceptionHandler — every
+             service that imports this class already brings spring-tx transitively via
+             spring-boot-starter-data-jpa. -->
+        <dependency><groupId>org.springframework</groupId><artifactId>spring-tx</artifactId><scope>provided</scope></dependency>
         <dependency><groupId>io.jsonwebtoken</groupId><artifactId>jjwt-api</artifactId><version>${jjwt.version}</version></dependency>
 
         <!-- jjwt-impl/jjwt-jackson are runtime-only in every consuming service's own
