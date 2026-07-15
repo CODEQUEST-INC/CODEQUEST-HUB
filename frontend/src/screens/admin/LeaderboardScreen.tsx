@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getLeaderboard, LeaderboardEntry } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
@@ -17,16 +17,24 @@ export default function LeaderboardScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Guards against an in-flight request for a since-abandoned cohort
+  // resolving after a newer one and clobbering it with stale data.
+  const requestIdRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!token || !cohortId) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      setEntries(await getLeaderboard(cohortId, token));
+      const data = await getLeaderboard(cohortId, token);
+      if (requestIdRef.current === requestId) setEntries(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load leaderboard');
+      if (requestIdRef.current === requestId) {
+        setError(e instanceof Error ? e.message : 'Failed to load leaderboard');
+      }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [token, cohortId]);
 

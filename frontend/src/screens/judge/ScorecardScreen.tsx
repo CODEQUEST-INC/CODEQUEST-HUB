@@ -23,6 +23,9 @@ export default function ScorecardScreen() {
 
   useEffect(() => {
     if (!token || !cohortId) return;
+    // Guards against an in-flight request for a since-abandoned cohort
+    // resolving after a newer one and clobbering it with stale data.
+    let cancelled = false;
     setGroupId(null);
     setScores({});
     setSuccess(false);
@@ -30,11 +33,19 @@ export default function ScorecardScreen() {
     setError(null);
     Promise.all([listGroupsByCohort(cohortId, token), listCriteria(cohortId, token)])
       .then(([groupList, criteriaList]) => {
+        if (cancelled) return;
         setGroups(groupList);
         setCriteria(criteriaList.filter((c) => c.active));
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load cohort data'))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load cohort data');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [token, cohortId]);
 
   useEffect(() => {

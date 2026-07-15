@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { ApiError } from '../../api/client';
 import { createCriterion, deleteCriterion, JudgingCriterion, listCriteria, updateCriterion } from '../../api/judging';
@@ -23,16 +23,24 @@ export default function CriteriaScreen() {
   const [editWeight, setEditWeight] = useState('');
   const [editActive, setEditActive] = useState(true);
 
+  // Guards against an in-flight request for a since-abandoned cohort
+  // resolving after a newer one and clobbering it with stale data.
+  const requestIdRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!token || !cohortId) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      setCriteria(await listCriteria(cohortId, token));
+      const data = await listCriteria(cohortId, token);
+      if (requestIdRef.current === requestId) setCriteria(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load criteria');
+      if (requestIdRef.current === requestId) {
+        setError(e instanceof Error ? e.message : 'Failed to load criteria');
+      }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [token, cohortId]);
 
