@@ -1,8 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Cohort, listCohorts } from '../../api/cohorts';
 import { listShowcaseEntries, resolvePhotoUrl, ShowcaseEntryResponse } from '../../api/showcase';
 import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
@@ -13,8 +14,10 @@ import { accents, colors, radius, spacing, typography } from '../../theme';
 type Props = NativeStackScreenProps<ShowcaseStackParamList, 'ShowcaseGallery'>;
 
 export default function ShowcaseGalleryScreen({ navigation }: Props) {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [entries, setEntries] = useState<ShowcaseEntryResponse[]>([]);
+  const [cohorts, setCohorts] = useState<Cohort[]>([]);
+  const [selectedCohortId, setSelectedCohortId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,19 +25,43 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
     setLoading(true);
     setError(null);
     try {
-      setEntries(await listShowcaseEntries());
+      const [entryList, cohortList] = await Promise.all([
+        listShowcaseEntries(),
+        token ? listCohorts(token) : Promise.resolve([]),
+      ]);
+      setEntries(entryList);
+      setCohorts(cohortList);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load showcase');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [token]);
 
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load])
   );
+
+  const cohortNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    cohorts.forEach((c) => {
+      map[c.id] = `${c.name} (${c.year})`;
+    });
+    return map;
+  }, [cohorts]);
+
+  // Only cohorts with at least one published entry — avoids cluttering the
+  // filter row with cohorts that have nothing to show.
+  const cohortsWithEntries = useMemo(() => {
+    const idsWithEntries = new Set(entries.map((e) => e.cohortId));
+    return cohorts.filter((c) => idsWithEntries.has(c.id));
+  }, [cohorts, entries]);
+
+  const visibleEntries = selectedCohortId
+    ? entries.filter((e) => e.cohortId === selectedCohortId)
+    : entries;
 
   if (loading) {
     return (
@@ -55,12 +82,37 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      {cohortsWithEntries.length > 1 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          <Pressable
+            style={[styles.filterChip, !selectedCohortId && styles.filterChipSelected]}
+            onPress={() => setSelectedCohortId(null)}
+          >
+            <Text style={[styles.filterChipText, !selectedCohortId && styles.filterChipTextSelected]}>
+              All cohorts
+            </Text>
+          </Pressable>
+          {cohortsWithEntries.map((c) => (
+            <Pressable
+              key={c.id}
+              style={[styles.filterChip, selectedCohortId === c.id && styles.filterChipSelected]}
+              onPress={() => setSelectedCohortId(c.id)}
+            >
+              <Text style={[styles.filterChipText, selectedCohortId === c.id && styles.filterChipTextSelected]}>
+                {c.name} ({c.year})
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
+
       <FlatList
         contentContainerStyle={styles.list}
-        data={entries}
+        data={visibleEntries}
         keyExtractor={(e) => e.id}
         renderItem={({ item }) => {
           const photo = resolvePhotoUrl(item.photoUrl);
+          const cohortName = cohortNameById[item.cohortId];
           return (
             <Pressable onPress={() => navigation.navigate('ShowcaseDetail', { entry: item })}>
               <Card style={styles.card} tint={accents.pink}>
@@ -75,7 +127,10 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
                   <Text style={styles.cardTitle} numberOfLines={1}>
                     {item.title}
                   </Text>
-                  <Text style={styles.cardMeta}>{item.groupName ?? `Group ${item.groupNumber}`}</Text>
+                  <Text style={styles.cardMeta}>
+                    {item.groupName ?? `Group ${item.groupNumber}`}
+                    {cohortName ? ` · ${cohortName}` : ''}
+                  </Text>
                 </View>
               </Card>
             </Pressable>
@@ -84,8 +139,12 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
         ListEmptyComponent={
           <EmptyState
             icon="image"
-            heading="Nothing published yet"
-            subtext="Approved groups can publish their project here once they're ready to show it off."
+            heading={selectedCohortId ? 'Nothing from this cohort yet' : 'Nothing published yet'}
+            subtext={
+              selectedCohortId
+                ? 'No showcase entries for this cohort yet — try "All cohorts".'
+                : "Approved groups can publish their project here once they're ready to show it off."
+            }
           />
         }
       />
@@ -105,6 +164,17 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   editLinkText: { color: accents.pink.fg, fontWeight: '600', fontSize: 13 },
+  filterRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  filterChipSelected: { backgroundColor: accents.pink.accent, borderColor: accents.pink.accent },
+  filterChipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  filterChipTextSelected: { color: colors.textOnPrimary },
   list: { padding: spacing.lg, gap: spacing.md },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   thumb: { width: 56, height: 56, borderRadius: radius.sm },
