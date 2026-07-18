@@ -11,11 +11,11 @@ A Spring Boot microservices backend behind a single gateway, plus an Expo/React 
    Expo app (web/iOS/Android) ──────────▶  │  gateway-service  │  :8080
                         └──────────────────┘
                                  │
-        ┌────────────┬──────────┼──────────┬─────────────┬───────────────┐
-        ▼            ▼          ▼          ▼             ▼               ▼
-  auth-service  group-service  project-service  task-service  judging-service  showcase-service
-     :8081         :8082          :8083           :8084          :8085           :8086
-        └────────────┴──────────┴──────────┴─────────────┴───────────────┘
+        ┌────────────┬──────────┼──────────┬─────────────┬───────────────┬───────────────┐
+        ▼            ▼          ▼          ▼             ▼               ▼               ▼
+  auth-service  group-service  project-service  task-service  judging-service  showcase-service  payment-service
+     :8081         :8082          :8083           :8084          :8085           :8086           :8087
+        └────────────┴──────────┴──────────┴─────────────┴───────────────┴───────────────┘
                                  │
                           shared Postgres (Neon)
 ```
@@ -27,6 +27,7 @@ A Spring Boot microservices backend behind a single gateway, plus an Expo/React 
 - **task-service** — per-group task board.
 - **judging-service** — judging criteria, judge assignment, scorecards, leaderboard.
 - **showcase-service** — public project showcase gallery with photo upload.
+- **payment-service** — Paystack-backed registration/payment flow for T-shirt orders.
 - **common-security** — shared library (JWT utilities, security filter, exception handling) every service depends on.
 
 All services share one Postgres database (Neon) — there's no per-service database. Auth is JWT-based: `auth-service` issues tokens, every other service validates them independently via the shared `common-security` module.
@@ -59,7 +60,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-This builds and starts all 7 services. Verify it's up:
+This builds and starts all 8 services. Verify it's up:
 
 ```bash
 curl http://localhost:8080/api/auth/health
@@ -114,7 +115,7 @@ Each backend service has mocked-repository unit tests plus a Testcontainers-back
 ```
 auth-service/        group-service/       project-service/
 task-service/         judging-service/     showcase-service/
-gateway-service/      common-security/     (shared library)
+payment-service/      gateway-service/     common-security/     (shared library)
 database/init/        (SQL schema, numbered migrations)
 frontend/              (Expo app)
 ```

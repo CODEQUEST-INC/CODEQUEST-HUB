@@ -11,6 +11,7 @@ services:
       TASK_SERVICE_URL: http://task-service:8084
       JUDGING_SERVICE_URL: http://judging-service:8085
       SHOWCASE_SERVICE_URL: http://showcase-service:8086
+      PAYMENT_SERVICE_URL: http://payment-service:8087
       GATEWAY_CORS_ALLOWED_ORIGINS: ${GATEWAY_CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:19006}
     ports:
       - "8080:8080"
@@ -21,6 +22,7 @@ services:
       - task-service
       - judging-service
       - showcase-service
+      - payment-service
 
   auth-service:
     build:
@@ -90,6 +92,23 @@ services:
       SHOWCASE_UPLOAD_DIR: /data/uploads
     volumes:
       - showcase_uploads:/data/uploads
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PAYMENT_UNIT_PRICE_KOBO: ${PAYMENT_UNIT_PRICE_KOBO:-10000}
+      PAYMENT_CURRENCY: ${PAYMENT_CURRENCY:-GHS}
+      PAYMENT_CALLBACK_URL: ${PAYMENT_CALLBACK_URL:-}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
+      PAYSTACK_BASE_URL: ${PAYSTACK_BASE_URL:-https://api.paystack.co}
+    ports:
+      - "8087:8087"
 
 volumes:
   showcase_uploads:
