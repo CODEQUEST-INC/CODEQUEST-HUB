@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { AuthStackParamList } from '../navigation/types';
 import { colors, radius, spacing, typography } from '../theme';
 
-const logo = require('../../assets/icon.png');
+const logo = require('../../assets/logo-mark.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
