@@ -12,31 +12,40 @@ export default function SettingsScreen() {
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.container}>
-      <Card style={styles.row}>
-        <View style={styles.rowText}>
-          <Text style={styles.rowTitle}>Dark mode</Text>
-          <Text style={styles.rowSubtitle}>Switch between light and dark appearance</Text>
-        </View>
-        <Switch
-          value={mode === 'dark'}
-          onValueChange={toggleTheme}
-          trackColor={{ false: colors.border, true: colors.primary }}
-          thumbColor={colors.surface}
-        />
-      </Card>
+    <View style={styles.screen}>
+      <View style={styles.container}>
+        <Card style={styles.row}>
+          <View style={styles.rowText}>
+            <Text style={styles.rowTitle}>Dark mode</Text>
+            <Text style={styles.rowSubtitle}>Switch between light and dark appearance</Text>
+          </View>
+          <Switch
+            value={mode === 'dark'}
+            onValueChange={toggleTheme}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.surface}
+          />
+        </Card>
 
-      <Pressable style={styles.logoutButton} onPress={logout}>
-        <Feather name="log-out" size={16} color={colors.danger} />
-        <Text style={styles.logoutText}>Log out</Text>
-      </Pressable>
+        <Pressable style={styles.logoutButton} onPress={logout}>
+          <Feather name="log-out" size={16} color={colors.danger} />
+          <Text style={styles.logoutText}>Log out</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
-    container: { flex: 1, padding: spacing.xxl, gap: spacing.lg, backgroundColor: colors.bg },
+    screen: { flex: 1, backgroundColor: colors.bg },
+    container: {
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
+      padding: spacing.xxl,
+      gap: spacing.lg,
+    },
     row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     rowText: { flex: 1 },
     rowTitle: { ...typography.body, fontWeight: '600' },

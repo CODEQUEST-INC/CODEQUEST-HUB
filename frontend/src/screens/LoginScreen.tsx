@@ -33,44 +33,53 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <Image source={logo} style={styles.logo} resizeMode="contain" />
-      <Text style={styles.title}>CodeQuestHub</Text>
+    <View style={styles.screen}>
+      <View style={styles.container}>
+        <Image source={logo} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>CodeQuestHub</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor={colors.textMuted}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor={colors.textMuted}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color={colors.textOnPrimary} /> : <Text style={styles.buttonText}>Log in</Text>}
-      </Pressable>
+        <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
+          {submitting ? <ActivityIndicator color={colors.textOnPrimary} /> : <Text style={styles.buttonText}>Log in</Text>}
+        </Pressable>
 
-      <Pressable onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Need an account? Register</Text>
-      </Pressable>
+        <Pressable onPress={() => navigation.navigate('Register')}>
+          <Text style={styles.link}>Need an account? Register</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 function createStyles(colors: Colors) {
   return StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    screen: { flex: 1, backgroundColor: colors.bg, justifyContent: 'center' },
+    container: {
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
+      padding: spacing.xxl,
+      gap: spacing.md,
+    },
     logo: { width: 88, height: 88, alignSelf: 'center', marginBottom: spacing.md },
     title: {
       ...typography.heading,

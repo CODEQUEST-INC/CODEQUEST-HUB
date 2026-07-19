@@ -175,6 +175,9 @@ function createStyles(colors: Colors) {
       padding: spacing.xxl,
       gap: spacing.md,
       backgroundColor: colors.bg,
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
     },
     title: {
       ...typography.heading,
