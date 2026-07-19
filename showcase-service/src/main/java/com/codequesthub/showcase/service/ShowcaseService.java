@@ -21,6 +21,10 @@ import java.util.UUID;
 @Service
 public class ShowcaseService {
 
+    // Simple gallery, no cover-photo concept — just capped so one group can't
+    // fill the showcase with dozens of screenshots.
+    private static final int MAX_PHOTOS_PER_ENTRY = 5;
+
     private static final Map<String, String> ALLOWED_CONTENT_TYPES = Map.of(
         "image/jpeg", ".jpg",
         "image/png", ".png",
@@ -28,17 +32,20 @@ public class ShowcaseService {
     );
 
     private final ShowcaseEntryRepository entryRepo;
+    private final ShowcasePhotoRepository photoRepo;
     private final GroupViewRepository groupViewRepo;
     private final GroupMemberRepository memberRepo;
     private final ProposalViewRepository proposalViewRepo;
     private final Path uploadDir;
 
     public ShowcaseService(ShowcaseEntryRepository entryRepo,
+                            ShowcasePhotoRepository photoRepo,
                             GroupViewRepository groupViewRepo,
                             GroupMemberRepository memberRepo,
                             ProposalViewRepository proposalViewRepo,
                             @Value("${showcase.upload-dir}") String uploadDir) {
         this.entryRepo = entryRepo;
+        this.photoRepo = photoRepo;
         this.groupViewRepo = groupViewRepo;
         this.memberRepo = memberRepo;
         this.proposalViewRepo = proposalViewRepo;
@@ -70,12 +77,18 @@ public class ShowcaseService {
     }
 
     @Transactional
-    public ShowcaseEntryResponse uploadPhoto(UUID groupId, UUID userId, MultipartFile file) {
+    public ShowcaseEntryResponse addPhoto(UUID groupId, UUID userId, MultipartFile file) {
         GroupView group = checkMemberAndApproved(groupId, userId);
 
         ShowcaseEntry entry = entryRepo.findByGroupId(groupId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Create the showcase entry's text fields before uploading a photo"));
+
+        long existingCount = photoRepo.countByEntryId(entry.getId());
+        if (existingCount >= MAX_PHOTOS_PER_ENTRY) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Maximum " + MAX_PHOTOS_PER_ENTRY + " photos per showcase entry — remove one before adding another");
+        }
 
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No file uploaded");
@@ -86,7 +99,6 @@ public class ShowcaseService {
                 "Unsupported image type. Allowed: jpeg, png, webp");
         }
 
-        String oldPhotoPath = entry.getPhotoPath();
         String filename = UUID.randomUUID() + extension;
         try {
             Files.write(uploadDir.resolve(filename), file.getBytes());
@@ -94,14 +106,32 @@ public class ShowcaseService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save photo");
         }
 
-        entry.setPhotoPath(filename);
-        ShowcaseEntry saved = entryRepo.save(entry);
+        ShowcasePhoto photo = new ShowcasePhoto();
+        photo.setEntryId(entry.getId());
+        photo.setPhotoPath(filename);
+        photo.setPosition((int) existingCount);
+        photoRepo.save(photo);
 
-        if (oldPhotoPath != null) {
-            deleteFileQuietly(oldPhotoPath);
+        return toResponse(entry, group);
+    }
+
+    @Transactional
+    public ShowcaseEntryResponse deletePhoto(UUID groupId, UUID userId, UUID photoId) {
+        GroupView group = checkMemberAndApproved(groupId, userId);
+
+        ShowcaseEntry entry = entryRepo.findByGroupId(groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No showcase entry for this group"));
+
+        ShowcasePhoto photo = photoRepo.findById(photoId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found"));
+        if (!photo.getEntryId().equals(entry.getId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found");
         }
 
-        return toResponse(saved, group);
+        photoRepo.delete(photo);
+        deleteFileQuietly(photo.getPhotoPath());
+
+        return toResponse(entry, group);
     }
 
     public byte[] readPhoto(String filename) {
@@ -130,10 +160,12 @@ public class ShowcaseService {
         }
         ShowcaseEntry entry = entryRepo.findByGroupId(groupId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No showcase entry for this group"));
+
+        List<ShowcasePhoto> photos = photoRepo.findByEntryIdOrderByPositionAsc(entry.getId());
+        // DB rows cascade-delete with the entry, but the files on disk don't —
+        // grab the filenames first, then clean them up after.
         entryRepo.delete(entry);
-        if (entry.getPhotoPath() != null) {
-            deleteFileQuietly(entry.getPhotoPath());
-        }
+        photos.forEach(p -> deleteFileQuietly(p.getPhotoPath()));
     }
 
     public List<ShowcaseEntryResponse> listEntries(UUID cohortId) {
@@ -171,8 +203,10 @@ public class ShowcaseService {
     }
 
     private ShowcaseEntryResponse toResponse(ShowcaseEntry entry, GroupView group) {
+        List<ShowcasePhoto> photos = photoRepo.findByEntryIdOrderByPositionAsc(entry.getId());
         return new ShowcaseEntryResponse(entry,
             group == null ? null : group.getGroupNumber(),
-            group == null ? null : group.getName());
+            group == null ? null : group.getName(),
+            photos);
     }
 }

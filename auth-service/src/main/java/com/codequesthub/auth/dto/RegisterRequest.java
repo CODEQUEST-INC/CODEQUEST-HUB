@@ -2,6 +2,7 @@ package com.codequesthub.auth.dto;
 
 import com.codequesthub.auth.entity.UserRole;
 import jakarta.validation.constraints.*;
+import java.util.UUID;
 
 public class RegisterRequest {
     @NotBlank @Size(min = 2, max = 150)
@@ -16,6 +17,7 @@ public class RegisterRequest {
     private UserRole role = UserRole.student;
     private String studentId;
     private String indexNumber;
+    private UUID cohortId;
 
     public String getFullName() { return fullName; }
     public void setFullName(String v) { this.fullName = v; }
@@ -29,4 +31,6 @@ public class RegisterRequest {
     public void setStudentId(String v) { this.studentId = v; }
     public String getIndexNumber() { return indexNumber; }
     public void setIndexNumber(String v) { this.indexNumber = v; }
+    public UUID getCohortId() { return cohortId; }
+    public void setCohortId(UUID v) { this.cohortId = v; }
 }

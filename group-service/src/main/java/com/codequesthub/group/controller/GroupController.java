@@ -9,6 +9,7 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 import java.util.UUID;
@@ -43,6 +44,15 @@ public class GroupController {
             .body(Map.of("data", groupService.assignMembers(groupId, req)));
     }
 
+    // admin only — dissolves and rebuilds every group in the cohort from
+    // scratch, chunking all of the cohort's registered students into
+    // fixed-size groups ordered by index number.
+    @PostMapping("/cohorts/{cohortId}/auto-group")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> autoGroup(@PathVariable UUID cohortId, @Valid @RequestBody AutoGroupRequest req) {
+        return ResponseEntity.ok(Map.of("data", groupService.autoGroup(cohortId, req)));
+    }
+
     // any authenticated user — list groups in a cohort (e.g. for a judge picking a group to score)
     @GetMapping
     public ResponseEntity<?> listByCohort(@RequestParam UUID cohortId) {
@@ -75,5 +85,26 @@ public class GroupController {
         String role = claims.get("role", String.class);
         Group g = groupService.setGroupLeader(groupId, actingUserId, role, req);
         return ResponseEntity.ok(Map.of("data", g));
+    }
+
+    // any member of the group
+    @PostMapping(value = "/{groupId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadPhoto(@PathVariable UUID groupId,
+                                          @RequestParam("file") MultipartFile file,
+                                          Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        return ResponseEntity.ok(Map.of("data", groupService.uploadPhoto(groupId, userId, file)));
+    }
+
+    // public — React Native's <Image> can't attach an Authorization header
+    @GetMapping("/photos/{filename}")
+    public ResponseEntity<byte[]> getPhoto(@PathVariable String filename) {
+        byte[] bytes = groupService.readPhoto(filename);
+        MediaType contentType = filename.endsWith(".png") ? MediaType.IMAGE_PNG
+            : filename.endsWith(".webp") ? MediaType.valueOf("image/webp")
+            : MediaType.IMAGE_JPEG;
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_TYPE, contentType.toString())
+            .body(bytes);
     }
 }

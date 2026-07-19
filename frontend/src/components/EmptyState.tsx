@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Text from './Text';
+import { Colors, radius, spacing, typography, useTheme } from '../theme';
 
 interface EmptyStateProps {
   icon: React.ComponentProps<typeof Feather>['name'];
@@ -12,6 +13,8 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ icon, heading, subtext, ctaLabel, onPressCta }: EmptyStateProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
@@ -28,25 +31,27 @@ export default function EmptyState({ icon, heading, subtext, ctaLabel, onPressCt
   );
 }
 
-const styles = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center', padding: spacing.xxxl, gap: spacing.sm },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryTint,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  heading: { ...typography.subheading, textAlign: 'center' },
-  subtext: { ...typography.caption, textAlign: 'center', maxWidth: 260 },
-  cta: {
-    marginTop: spacing.md,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xxl,
-  },
-  ctaText: { color: colors.textOnPrimary, fontWeight: '600' },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { alignItems: 'center', justifyContent: 'center', padding: spacing.xxxl, gap: spacing.sm },
+    iconWrap: {
+      width: 56,
+      height: 56,
+      borderRadius: radius.pill,
+      backgroundColor: colors.primaryTint,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.xs,
+    },
+    heading: { ...typography.subheading, textAlign: 'center' },
+    subtext: { ...typography.caption, color: colors.textMuted, textAlign: 'center', maxWidth: 260 },
+    cta: {
+      marginTop: spacing.md,
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xxl,
+    },
+    ctaText: { color: colors.textOnPrimary, fontWeight: '600' },
+  });
+}

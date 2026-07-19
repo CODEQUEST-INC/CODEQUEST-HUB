@@ -28,6 +28,15 @@
         {
           "photosPermission": "Allow CodeQuestHub to access your photos to upload a showcase image."
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
       ]
     ],
     "extra": {

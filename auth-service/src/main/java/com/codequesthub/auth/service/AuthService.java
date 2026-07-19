@@ -3,6 +3,7 @@ package com.codequesthub.auth.service;
 import com.codequesthub.auth.dto.*;
 import com.codequesthub.auth.entity.User;
 import com.codequesthub.auth.entity.UserRole;
+import com.codequesthub.auth.repository.CohortViewRepository;
 import com.codequesthub.auth.repository.UserRepository;
 import com.codequesthub.common.security.JwtUtil;
 import org.springframework.data.domain.PageRequest;
@@ -15,11 +16,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class AuthService {
 
     private final UserRepository userRepo;
+    private final CohortViewRepository cohortViewRepo;
     private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
 
-    public AuthService(UserRepository userRepo, PasswordEncoder encoder, JwtUtil jwtUtil) {
+    public AuthService(UserRepository userRepo, CohortViewRepository cohortViewRepo,
+                       PasswordEncoder encoder, JwtUtil jwtUtil) {
         this.userRepo = userRepo;
+        this.cohortViewRepo = cohortViewRepo;
         this.encoder = encoder;
         this.jwtUtil = jwtUtil;
     }
@@ -30,13 +34,34 @@ public class AuthService {
                 "An account with this email already exists");
         }
 
+        UserRole role = req.getRole() != null ? req.getRole() : UserRole.student;
+
+        // Index number, student ID, and cohort all need to be present on every
+        // student — not required for other roles. Index number/cohort back
+        // automated grouping; student ID is the university reference number.
+        if (role == UserRole.student) {
+            if (req.getIndexNumber() == null || req.getIndexNumber().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Index number is required for students");
+            }
+            if (req.getStudentId() == null || req.getStudentId().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Student ID is required for students");
+            }
+            if (req.getCohortId() == null || !cohortViewRepo.existsById(req.getCohortId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A valid cohort is required for students");
+            }
+        }
+
         User user = new User();
         user.setFullName(req.getFullName());
         user.setEmail(req.getEmail());
         user.setPasswordHash(encoder.encode(req.getPassword()));
-        user.setRole(req.getRole() != null ? req.getRole() : com.codequesthub.auth.entity.UserRole.student);
+        user.setRole(role);
         user.setStudentId(req.getStudentId());
         user.setIndexNumber(req.getIndexNumber());
+        user.setCohortId(req.getCohortId());
 
         user = userRepo.save(user);
 

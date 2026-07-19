@@ -53,4 +53,13 @@ public class CohortController {
         Cohort c = cohortService.updateCohort(id, req);
         return ResponseEntity.ok(Map.of("data", c));
     }
+
+    // admin only — blocked (not cascaded) if the cohort still has groups,
+    // students, criteria, or judges attached
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> deleteCohort(@PathVariable UUID id) {
+        cohortService.deleteCohort(id);
+        return ResponseEntity.noContent().build();
+    }
 }

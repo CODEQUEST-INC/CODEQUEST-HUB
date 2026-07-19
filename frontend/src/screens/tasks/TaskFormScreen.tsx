@@ -1,17 +1,21 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { getMyGroup, GroupMember } from '../../api/groups';
 import { assignTask, createTask, deleteTask, updateTask } from '../../api/tasks';
 import { useAuth } from '../../auth/AuthContext';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { TaskStackParamList } from '../../navigation/types';
-import { colors, radius, spacing } from '../../theme';
+import { Colors, radius, spacing, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<TaskStackParamList, 'TaskForm'>;
 
 export default function TaskFormScreen({ route, navigation }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { mode } = route.params;
   const existing = mode === 'edit' ? route.params.task : null;
 
@@ -78,7 +82,7 @@ export default function TaskFormScreen({ route, navigation }: Props) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.label}>Title</Text>
       <TextInput
         style={styles.input}
@@ -147,45 +151,47 @@ export default function TaskFormScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
-  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: spacing.sm },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 16,
-    backgroundColor: colors.surface,
-  },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.text },
-  chipTextSelected: { color: colors.textOnPrimary },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.xl,
-  },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
-  deleteButton: {
-    borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  deleteButtonText: { color: colors.danger, fontWeight: '600' },
-  error: { color: colors.danger },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+    label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: spacing.sm },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      fontSize: 16,
+      backgroundColor: colors.surface,
+    },
+    multiline: { minHeight: 70, textAlignVertical: 'top' },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    chip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.pill,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipText: { color: colors.text },
+    chipTextSelected: { color: colors.textOnPrimary },
+    button: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.xl,
+    },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    deleteButton: {
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.md,
+    },
+    deleteButtonText: { color: colors.danger, fontWeight: '600' },
+    error: { color: colors.danger },
+  });
+}

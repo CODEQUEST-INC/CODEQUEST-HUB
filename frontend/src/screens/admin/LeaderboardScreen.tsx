@@ -1,17 +1,21 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '../../components/Text';
 import { getLeaderboard, LeaderboardEntry } from '../../api/judging';
+import { resolveGroupPhotoUrl } from '../../api/groups';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
-import { accentList, colors, spacing, typography } from '../../theme';
-
-const RANK_COLORS = [accentList[0].accent, accentList[1].accent, accentList[2].accent];
+import { Colors, spacing, typography, useTheme } from '../../theme';
 
 export default function LeaderboardScreen() {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const accentList = Object.values(colors.accents);
+  const RANK_COLORS = [accentList[0].accent, accentList[1].accent, accentList[2].accent];
   const [cohortId, setCohortId] = useState<string | null>(null);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +49,7 @@ export default function LeaderboardScreen() {
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -57,7 +61,7 @@ export default function LeaderboardScreen() {
         return (
           <Card key={e.groupId} style={styles.card}>
             <Text style={[styles.rank, { color: rankColor }]}>#{index + 1}</Text>
-            <Avatar name={name} size={40} />
+            <Avatar name={name} size={40} photoUrl={resolveGroupPhotoUrl(e.groupPhotoUrl)} />
             <View style={styles.details}>
               <Text style={styles.cardTitle}>{name}</Text>
               <Text style={styles.cardMeta}>
@@ -73,13 +77,15 @@ export default function LeaderboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
-  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rank: { fontSize: 18, fontWeight: '800', width: 30 },
-  details: { flex: 1 },
-  cardTitle: { ...typography.body, fontWeight: '600' },
-  cardMeta: { ...typography.caption, marginTop: 2 },
-  emptyText: { color: colors.textMuted, textAlign: 'center' },
-  error: { color: colors.danger },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+    card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    rank: { fontSize: 18, fontWeight: '800', width: 30 },
+    details: { flex: 1 },
+    cardTitle: { ...typography.body, fontWeight: '600' },
+    cardMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+    emptyText: { color: colors.textMuted, textAlign: 'center' },
+    error: { color: colors.danger },
+  });
+}

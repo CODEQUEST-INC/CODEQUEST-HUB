@@ -66,7 +66,7 @@ class JudgingServiceTest {
 
         assertThatThrownBy(() -> service().createCriterion(req))
             .isInstanceOf(ResponseStatusException.class)
-            .hasMessageContaining("cannot exceed 100");
+            .hasMessageContaining("leaving 30 available");
     }
 
     @Test
@@ -161,6 +161,28 @@ class JudgingServiceTest {
         assertThat(entries.get(2).getGroupId()).isEqualTo(groupBId);
         assertThat(entries.get(2).getAverageScore()).isNull();
         assertThat(entries.get(2).getJudgeCount()).isEqualTo(0);
+    }
+
+    @Test
+    void getLeaderboard_derivesGroupPhotoUrlWhenSet_andNullWhenNot() {
+        UUID cohortId = UUID.randomUUID();
+        UUID groupWithPhotoId = UUID.randomUUID();
+        UUID groupWithoutPhotoId = UUID.randomUUID();
+
+        GroupView groupWithPhoto = groupViewWith(groupWithPhotoId, "Has Photo", 1);
+        ReflectionTestUtils.setField(groupWithPhoto, "photoPath", "abc123.jpg");
+        GroupView groupWithoutPhoto = groupViewWith(groupWithoutPhotoId, "No Photo", 2);
+
+        when(groupViewRepo.findByCohortId(cohortId)).thenReturn(List.of(groupWithPhoto, groupWithoutPhoto));
+        when(criteriaRepo.findByCohortId(cohortId)).thenReturn(List.of());
+        when(scorecardRepo.findByGroupIdIn(any())).thenReturn(List.of());
+
+        var entries = service().getLeaderboard(cohortId);
+
+        var withPhoto = entries.stream().filter(e -> e.getGroupId().equals(groupWithPhotoId)).findFirst().orElseThrow();
+        var withoutPhoto = entries.stream().filter(e -> e.getGroupId().equals(groupWithoutPhotoId)).findFirst().orElseThrow();
+        assertThat(withPhoto.getGroupPhotoUrl()).isEqualTo("/api/groups/photos/abc123.jpg");
+        assertThat(withoutPhoto.getGroupPhotoUrl()).isNull();
     }
 
     private GroupView groupViewWith(UUID id, String name, int number) {

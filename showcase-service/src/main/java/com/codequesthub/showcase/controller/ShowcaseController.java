@@ -41,13 +41,21 @@ public class ShowcaseController {
         return ResponseEntity.ok(Map.of("data", entry));
     }
 
-    // any group member — entry must already exist
+    // any group member — entry must already exist, capped at 5 photos
     @PostMapping(value = "/{groupId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> uploadPhoto(@PathVariable UUID groupId,
+    public ResponseEntity<?> addPhoto(@PathVariable UUID groupId,
                                           @RequestParam("file") MultipartFile file,
                                           Authentication auth) {
         UUID userId = UUID.fromString((String) auth.getPrincipal());
-        ShowcaseEntryResponse entry = showcaseService.uploadPhoto(groupId, userId, file);
+        ShowcaseEntryResponse entry = showcaseService.addPhoto(groupId, userId, file);
+        return ResponseEntity.ok(Map.of("data", entry));
+    }
+
+    // any group member
+    @DeleteMapping("/{groupId}/photo/{photoId}")
+    public ResponseEntity<?> deletePhoto(@PathVariable UUID groupId, @PathVariable UUID photoId, Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        ShowcaseEntryResponse entry = showcaseService.deletePhoto(groupId, userId, photoId);
         return ResponseEntity.ok(Map.of("data", entry));
     }
 

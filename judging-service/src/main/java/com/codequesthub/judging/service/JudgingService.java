@@ -88,10 +88,13 @@ public class JudgingService {
             .map(JudgingCriterion::getWeight)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (existingTotal.add(incomingWeight).compareTo(BigDecimal.valueOf(100)) > 0) {
+        BigDecimal newTotal = existingTotal.add(incomingWeight);
+        if (newTotal.compareTo(BigDecimal.valueOf(100)) > 0) {
+            BigDecimal remaining = BigDecimal.valueOf(100).subtract(existingTotal);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Total active criteria weight for this cohort cannot exceed 100 (currently "
-                    + existingTotal + ", adding " + incomingWeight + ")");
+                "This criterion's weight is too high — the cohort's other active criteria already use "
+                    + existingTotal + " of the 100-point budget, leaving " + remaining
+                    + " available. Lower this weight to " + remaining + " or less.");
         }
     }
 
@@ -209,7 +212,8 @@ public class JudgingService {
                 : weightedSums.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
                     .divide(BigDecimal.valueOf(weightedSums.size()), 2, RoundingMode.HALF_UP);
 
-            entries.add(new LeaderboardEntry(group.getId(), group.getName(), group.getGroupNumber(),
+            String photoUrl = group.getPhotoPath() == null ? null : "/api/groups/photos/" + group.getPhotoPath();
+            entries.add(new LeaderboardEntry(group.getId(), group.getName(), group.getGroupNumber(), photoUrl,
                 average, scorecards.size()));
         }
 

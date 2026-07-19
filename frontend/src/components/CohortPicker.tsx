@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from './Text';
 import { Cohort, listCohorts } from '../api/cohorts';
 import { useAuth } from '../auth/AuthContext';
-import { colors, radius, spacing } from '../theme';
+import { Colors, radius, spacing, useTheme } from '../theme';
 
 interface Props {
   selectedCohortId: string | null;
@@ -11,6 +12,8 @@ interface Props {
 
 export default function CohortPicker({ selectedCohortId, onSelect }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
 
   useEffect(() => {
@@ -51,18 +54,20 @@ export default function CohortPicker({ selectedCohortId, onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.sm },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.text },
-  chipTextSelected: { color: colors.textOnPrimary },
-  empty: { padding: spacing.lg },
-  emptyText: { color: colors.textMuted },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    row: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.sm },
+    chip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.pill,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipText: { color: colors.text },
+    chipTextSelected: { color: colors.textOnPrimary },
+    empty: { padding: spacing.lg },
+    emptyText: { color: colors.textMuted },
+  });
+}

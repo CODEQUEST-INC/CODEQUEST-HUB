@@ -43,6 +43,9 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
+      GROUP_UPLOAD_DIR: /data/uploads
+    volumes:
+      - group_uploads:/data/uploads
 
   project-service:
     build:
@@ -54,6 +57,9 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
+      PROJECT_UPLOAD_DIR: /data/uploads
+    volumes:
+      - project_uploads:/data/uploads
 
   task-service:
     build:
@@ -93,3 +99,5 @@ services:
 
 volumes:
   showcase_uploads:
+  group_uploads:
+  project_uploads:

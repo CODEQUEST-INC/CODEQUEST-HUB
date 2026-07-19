@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import TextInput from './TextInput';
+import Text from './Text';
 import { searchUsers, UserSearchResult } from '../api/users';
 import { useAuth } from '../auth/AuthContext';
 import Avatar from './Avatar';
-import { colors, radius, spacing, typography } from '../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../theme';
 
 interface Props {
   onSelect: (user: UserSearchResult) => void;
@@ -15,6 +17,8 @@ interface Props {
 // pasting raw UUIDs into judge/member/supervisor assignment forms.
 export default function UserPicker({ onSelect, roleFilter, placeholder }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,35 +89,37 @@ export default function UserPicker({ onSelect, roleFilter, placeholder }: Props)
   );
 }
 
-const styles = StyleSheet.create({
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    fontSize: 15,
-    backgroundColor: colors.surface,
-  },
-  spinner: { marginTop: spacing.sm },
-  dropdown: {
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  rowLast: { borderBottomWidth: 0 },
-  rowText: { flex: 1 },
-  name: { ...typography.body, fontWeight: '600' },
-  role: { ...typography.caption, textTransform: 'capitalize' },
-  empty: { ...typography.caption, marginTop: spacing.sm },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      padding: spacing.md,
+      fontSize: 15,
+      backgroundColor: colors.surface,
+    },
+    spinner: { marginTop: spacing.sm },
+    dropdown: {
+      marginTop: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      padding: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    rowLast: { borderBottomWidth: 0 },
+    rowText: { flex: 1 },
+    name: { ...typography.body, fontWeight: '600' },
+    role: { ...typography.caption, color: colors.textMuted, textTransform: 'capitalize' },
+    empty: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm },
+  });
+}

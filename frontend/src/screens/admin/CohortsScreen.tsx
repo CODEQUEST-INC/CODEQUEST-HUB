@@ -1,14 +1,19 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
-import { Cohort, createCohort, listCohorts, updateCohort } from '../../api/cohorts';
+import { Cohort, createCohort, deleteCohort, listCohorts, updateCohort } from '../../api/cohorts';
 import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
-import { accentList, colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 export default function CohortsScreen() {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const accentList = Object.values(colors.accents);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +25,9 @@ export default function CohortsScreen() {
   const [editName, setEditName] = useState('');
   const [editYear, setEditYear] = useState('');
   const [editActive, setEditActive] = useState(true);
+
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -58,6 +66,26 @@ export default function CohortsScreen() {
     }
   };
 
+  const onDelete = async (id: string) => {
+    if (!token) return;
+    if (confirmingDeleteId !== id) {
+      setConfirmingDeleteId(id);
+      setTimeout(() => setConfirmingDeleteId((current) => (current === id ? null : current)), 4000);
+      return;
+    }
+    setConfirmingDeleteId(null);
+    setError(null);
+    setDeletingId(id);
+    try {
+      await deleteCohort(id, token);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete cohort');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const startEdit = (c: Cohort) => {
     setEditingId(c.id);
     setEditName(c.name);
@@ -83,7 +111,7 @@ export default function CohortsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -116,9 +144,24 @@ export default function CohortsScreen() {
             <Text style={styles.cardTitle}>
               {c.name} ({c.year}) {!c.active ? '· inactive' : ''}
             </Text>
-            <Pressable style={styles.smallButton} onPress={() => startEdit(c)}>
-              <Text style={styles.smallButtonText}>Edit</Text>
-            </Pressable>
+            <View style={styles.rowButtons}>
+              <Pressable style={styles.smallButton} onPress={() => startEdit(c)}>
+                <Text style={styles.smallButtonText}>Edit</Text>
+              </Pressable>
+              <Pressable
+                style={styles.smallDangerButton}
+                onPress={() => onDelete(c.id)}
+                disabled={deletingId === c.id}
+              >
+                {deletingId === c.id ? (
+                  <ActivityIndicator size="small" color={colors.danger} />
+                ) : (
+                  <Text style={styles.smallDangerButtonText}>
+                    {confirmingDeleteId === c.id ? 'Tap again to confirm' : 'Delete'}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
           </Card>
         )
       )}
@@ -142,38 +185,49 @@ export default function CohortsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
-  cardTitle: { ...typography.body, fontWeight: '600' },
-  body: { ...typography.body },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    fontSize: 15,
-    backgroundColor: colors.surface,
-  },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowButtons: { flexDirection: 'row', gap: spacing.sm },
-  button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
-  smallButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    alignSelf: 'flex-start',
-  },
-  smallButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 13 },
-  smallSecondaryButton: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  smallSecondaryButtonText: { color: colors.text, fontWeight: '600', fontSize: 13 },
-  emptyText: { color: colors.textMuted, textAlign: 'center' },
-  error: { color: colors.danger },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    cardTitle: { ...typography.body, fontWeight: '600' },
+    body: { ...typography.body },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      padding: spacing.md,
+      fontSize: 15,
+      backgroundColor: colors.surface,
+    },
+    switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    rowButtons: { flexDirection: 'row', gap: spacing.sm },
+    button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
+    smallButton: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      alignSelf: 'flex-start',
+    },
+    smallButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 13 },
+    smallSecondaryButton: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    smallSecondaryButtonText: { color: colors.text, fontWeight: '600', fontSize: 13 },
+    smallDangerButton: {
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      alignSelf: 'flex-start',
+    },
+    smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
+    emptyText: { color: colors.textMuted, textAlign: 'center' },
+    error: { color: colors.danger },
+  });
+}

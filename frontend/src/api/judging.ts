@@ -41,6 +41,7 @@ export interface LeaderboardEntry {
   groupId: string;
   groupName: string | null;
   groupNumber: number;
+  groupPhotoUrl: string | null;
   averageScore: number | null;
   judgeCount: number;
 }

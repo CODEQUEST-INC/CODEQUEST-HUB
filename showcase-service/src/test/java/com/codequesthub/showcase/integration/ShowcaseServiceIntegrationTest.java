@@ -124,6 +124,9 @@ class ShowcaseServiceIntegrationTest {
             "06_init_judging.sql",
             "07_init_showcase.sql",
             "08_add_criterion_active_flag.sql",
+            "09_add_group_photo.sql",
+            "10_add_proposal_pdf.sql",
+            "11_showcase_multiple_photos.sql",
         };
         Path initDir = Path.of("../database/init");
         try (Connection conn = DriverManager.getConnection(

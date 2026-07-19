@@ -2,27 +2,32 @@ import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
 import { getMyGroup } from '../../api/groups';
 import { getMyProposal, ProposalResponse } from '../../api/proposals';
 import {
+  addShowcasePhoto,
   deleteShowcaseEntry,
+  deleteShowcasePhoto,
   getShowcaseEntry,
   resolvePhotoUrl,
   ShowcaseEntryResponse,
   upsertShowcaseEntry,
-  uploadShowcasePhoto,
 } from '../../api/showcase';
 import { useAuth } from '../../auth/AuthContext';
 import EmptyState from '../../components/EmptyState';
 import { ShowcaseStackParamList } from '../../navigation/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<ShowcaseStackParamList, 'ShowcaseEdit'>;
 
 export default function ShowcaseEditScreen({ navigation }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [loading, setLoading] = useState(true);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [proposal, setProposal] = useState<ProposalResponse | null>(null);
@@ -34,8 +39,11 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [savingText, setSavingText] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [confirmingTakeDown, setConfirmingTakeDown] = useState(false);
   const [takingDown, setTakingDown] = useState(false);
+
+  const MAX_PHOTOS = 5;
 
   useEffect(() => {
     if (!token) return;
@@ -95,12 +103,26 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
     setError(null);
     setUploadingPhoto(true);
     try {
-      const saved = await uploadShowcasePhoto(groupId, { uri: asset.uri, name: fileName, type: mimeType }, token);
+      const saved = await addShowcasePhoto(groupId, { uri: asset.uri, name: fileName, type: mimeType }, token);
       setEntry(saved);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to upload photo');
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  const onDeletePhoto = async (photoId: string) => {
+    if (!token || !groupId) return;
+    setError(null);
+    setDeletingPhotoId(photoId);
+    try {
+      const saved = await deleteShowcasePhoto(groupId, photoId, token);
+      setEntry(saved);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete photo');
+    } finally {
+      setDeletingPhotoId(null);
     }
   };
 
@@ -151,10 +173,11 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
     );
   }
 
-  const photo = resolvePhotoUrl(entry?.photoUrl ?? null);
+  const photos = entry?.photos ?? [];
+  const atCap = photos.length >= MAX_PHOTOS;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.label}>Title</Text>
       <TextInput
         style={styles.input}
@@ -194,23 +217,49 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
         )}
       </Pressable>
 
-      <Text style={[styles.label, styles.photoLabel]}>Photo</Text>
+      <Text style={[styles.label, styles.photoLabel]}>Photos ({photos.length}/{MAX_PHOTOS})</Text>
       {entry ? (
         <>
-          {photo ? <Image source={{ uri: photo }} style={styles.preview} resizeMode="cover" /> : null}
-          <Pressable style={styles.secondaryButton} onPress={onPickPhoto} disabled={uploadingPhoto}>
-            {uploadingPhoto ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <>
-                <Feather name="upload" size={15} color={colors.primary} />
-                <Text style={styles.secondaryButtonText}>{photo ? 'Replace photo' : 'Upload photo'}</Text>
-              </>
-            )}
-          </Pressable>
+          {photos.length > 0 ? (
+            <View style={styles.photoGrid}>
+              {photos.map((p) => {
+                const uri = resolvePhotoUrl(p.url);
+                return (
+                  <View key={p.id} style={styles.photoTile}>
+                    {uri ? <Image source={{ uri }} style={styles.photoImage} resizeMode="cover" /> : null}
+                    <Pressable
+                      style={styles.photoDeleteBadge}
+                      onPress={() => onDeletePhoto(p.id)}
+                      disabled={deletingPhotoId === p.id}
+                    >
+                      {deletingPhotoId === p.id ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Feather name="x" size={14} color="#fff" />
+                      )}
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+          {atCap ? (
+            <Text style={styles.hint}>Maximum {MAX_PHOTOS} photos reached — remove one to add another.</Text>
+          ) : (
+            <Pressable style={styles.secondaryButton} onPress={onPickPhoto} disabled={uploadingPhoto}>
+              {uploadingPhoto ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <>
+                  <Feather name="upload" size={15} color={colors.primary} />
+                  <Text style={styles.secondaryButtonText}>Add photo</Text>
+                </>
+              )}
+            </Pressable>
+          )}
         </>
       ) : (
-        <Text style={styles.hint}>Save the details above first, then you can upload a photo.</Text>
+        <Text style={styles.hint}>Save the details above first, then you can upload photos.</Text>
       )}
 
       {entry ? (
@@ -235,54 +284,69 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  label: { ...typography.body, fontWeight: '600', marginTop: spacing.sm },
-  photoLabel: { marginTop: spacing.xl },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 16,
-    backgroundColor: colors.surface,
-  },
-  multiline: { minHeight: 90, textAlignVertical: 'top' },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginTop: spacing.sm,
-  },
-  secondaryButtonText: { color: colors.primary, fontWeight: '600' },
-  dangerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginTop: spacing.xl,
-  },
-  dangerButtonText: { color: colors.danger, fontWeight: '600' },
-  preview: { width: '100%', aspectRatio: 16 / 10, borderRadius: radius.lg, marginTop: spacing.sm },
-  hint: { ...typography.caption },
-  error: { color: colors.danger },
-  link: { color: colors.primary, textAlign: 'center', marginTop: spacing.xl, fontWeight: '600' },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+    label: { ...typography.body, fontWeight: '600', marginTop: spacing.sm },
+    photoLabel: { marginTop: spacing.xl },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      fontSize: 16,
+      backgroundColor: colors.surface,
+    },
+    multiline: { minHeight: 90, textAlignVertical: 'top' },
+    button: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.md,
+    },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    secondaryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.sm,
+    },
+    secondaryButtonText: { color: colors.primary, fontWeight: '600' },
+    dangerButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.xl,
+    },
+    dangerButtonText: { color: colors.danger, fontWeight: '600' },
+    photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+    photoTile: { width: '31%', aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', position: 'relative' },
+    photoImage: { width: '100%', height: '100%' },
+    photoDeleteBadge: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    hint: { ...typography.caption, color: colors.textMuted },
+    error: { color: colors.danger },
+    link: { color: colors.primary, textAlign: 'center', marginTop: spacing.xl, fontWeight: '600' },
+  });
+}

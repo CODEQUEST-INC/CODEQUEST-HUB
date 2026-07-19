@@ -9,6 +9,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -20,6 +21,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -61,14 +63,24 @@ class AuthServiceIntegrationTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @Test
     @SuppressWarnings("unchecked")
     void registerThenMe_returnsTheSameUser() {
+        UUID cohortId = UUID.randomUUID();
+        jdbcTemplate.update(
+            "INSERT INTO cohorts (id, name, year) VALUES (?, ?, ?)", cohortId, "IT Cohort", 2026);
+
         Map<String, Object> registerBody = Map.of(
             "fullName", "Integration Test User",
             "email", "integration-test+" + System.nanoTime() + "@example.test",
             "password", "testpass123",
-            "role", "student"
+            "role", "student",
+            "indexNumber", "6143424",
+            "studentId", "20261234",
+            "cohortId", cohortId.toString()
         );
 
         ResponseEntity<Map> registerResponse = restTemplate.postForEntity("/api/auth/register", registerBody, Map.class);
@@ -104,6 +116,10 @@ class AuthServiceIntegrationTest {
             "06_init_judging.sql",
             "07_init_showcase.sql",
             "08_add_criterion_active_flag.sql",
+            "09_add_group_photo.sql",
+            "10_add_proposal_pdf.sql",
+            "11_showcase_multiple_photos.sql",
+            "12_add_user_cohort.sql",
         };
         Path initDir = Path.of("../database/init");
         try (Connection conn = DriverManager.getConnection(
