@@ -1,11 +1,13 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { reviewProposal, ReviewAction } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 import { SupervisorStackParamList } from '../../navigation/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<SupervisorStackParamList, 'ReviewDetail'>;
 
@@ -13,6 +15,8 @@ const FEEDBACK_MIN_LENGTH = 10;
 
 export default function ReviewDetailScreen({ route, navigation }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [proposal, setProposal] = useState(route.params.proposal);
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +44,7 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <StatusBadge status={proposal.status} />
       <Text style={styles.title}>{proposal.title}</Text>
 
@@ -102,46 +106,48 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
-  title: { ...typography.heading, fontSize: 20, marginTop: spacing.sm },
-  meta: { ...typography.caption, marginTop: spacing.lg },
-  sectionHeading: { ...typography.subheading, fontSize: 15, marginTop: spacing.lg },
-  body: { ...typography.body, color: colors.textMuted },
-  label: { ...typography.body, fontWeight: '600' },
-  feedbackLabel: { marginTop: spacing.xl },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 16,
-    minHeight: 90,
-    textAlignVertical: 'top',
-    marginTop: spacing.sm,
-    backgroundColor: colors.surface,
-  },
-  error: { color: colors.danger, marginTop: spacing.sm },
-  approveButton: {
-    backgroundColor: colors.accents.green.accent,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  changesButton: {
-    backgroundColor: colors.accents.amber.accent,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  rejectButton: {
-    backgroundColor: colors.danger,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+    title: { ...typography.heading, fontSize: 20, marginTop: spacing.sm },
+    meta: { ...typography.caption, color: colors.textMuted, marginTop: spacing.lg },
+    sectionHeading: { ...typography.subheading, fontSize: 15, marginTop: spacing.lg },
+    body: { ...typography.body, color: colors.textMuted },
+    label: { ...typography.body, fontWeight: '600' },
+    feedbackLabel: { marginTop: spacing.xl },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      fontSize: 16,
+      minHeight: 90,
+      textAlignVertical: 'top',
+      marginTop: spacing.sm,
+      backgroundColor: colors.surface,
+    },
+    error: { color: colors.danger, marginTop: spacing.sm },
+    approveButton: {
+      backgroundColor: colors.accents.green.accent,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.lg,
+    },
+    changesButton: {
+      backgroundColor: colors.accents.amber.accent,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.md,
+    },
+    rejectButton: {
+      backgroundColor: colors.danger,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.md,
+    },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+  });
+}

@@ -7,6 +7,12 @@ export type AuthStackParamList = {
   Register: undefined;
 };
 
+export type RootStackParamList = {
+  Main: undefined;
+  Profile: undefined;
+  Settings: undefined;
+};
+
 export type MainTabsParamList = {
   Dashboard: undefined;
   Group: undefined;

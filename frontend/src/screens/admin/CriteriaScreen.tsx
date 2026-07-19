@@ -1,16 +1,21 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
 import { createCriterion, deleteCriterion, JudgingCriterion, listCriteria, updateCriterion } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import ProgressBar from '../../components/ProgressBar';
-import { accentList, colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 export default function CriteriaScreen() {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const accentList = Object.values(colors.accents);
   const [cohortId, setCohortId] = useState<string | null>(null);
   const [criteria, setCriteria] = useState<JudgingCriterion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -108,7 +113,7 @@ export default function CriteriaScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -178,40 +183,47 @@ export default function CriteriaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
-  cardTitle: { ...typography.body, fontWeight: '600' },
-  cardMeta: { ...typography.caption },
-  body: { ...typography.body },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    fontSize: 15,
-    backgroundColor: colors.surface,
-  },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  rowButtons: { flexDirection: 'row', gap: spacing.sm },
-  button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
-  smallButton: { backgroundColor: colors.primary, borderRadius: radius.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
-  smallButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 13 },
-  smallSecondaryButton: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  smallSecondaryButtonText: { color: colors.text, fontWeight: '600', fontSize: 13 },
-  smallDangerButton: {
-    borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
-  error: { color: colors.danger },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    cardTitle: { ...typography.body, fontWeight: '600' },
+    cardMeta: { ...typography.caption, color: colors.textMuted },
+    body: { ...typography.body },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      padding: spacing.md,
+      fontSize: 15,
+      backgroundColor: colors.surface,
+    },
+    switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    rowButtons: { flexDirection: 'row', gap: spacing.sm },
+    button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
+    smallButton: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    smallButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 13 },
+    smallSecondaryButton: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    smallSecondaryButtonText: { color: colors.text, fontWeight: '600', fontSize: 13 },
+    smallDangerButton: {
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
+    error: { color: colors.danger },
+  });
+}

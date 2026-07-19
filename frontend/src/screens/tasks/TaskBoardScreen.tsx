@@ -2,7 +2,8 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
 import { getMyGroup } from '../../api/groups';
 import { listTasksForGroup, TaskResponse, TaskStatus, updateTaskStatus } from '../../api/tasks';
@@ -11,15 +12,24 @@ import Card from '../../components/Card';
 import EmptyState from '../../components/EmptyState';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { TaskStackParamList } from '../../navigation/types';
-import { AccentSwatch, accents, colors, radius, spacing, typography } from '../../theme';
+import { AccentSwatch, Accents, Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<TaskStackParamList, 'TaskBoard'>;
 
-const COLUMNS: { status: TaskStatus; label: string; tint: AccentSwatch; icon: React.ComponentProps<typeof Feather>['name'] }[] = [
-  { status: 'todo', label: 'To do', tint: accents.coral, icon: 'circle' },
-  { status: 'in_progress', label: 'In progress', tint: accents.amber, icon: 'loader' },
-  { status: 'done', label: 'Done', tint: accents.green, icon: 'check-circle' },
-];
+interface Column {
+  status: TaskStatus;
+  label: string;
+  tint: AccentSwatch;
+  icon: React.ComponentProps<typeof Feather>['name'];
+}
+
+function getColumns(accents: Accents): Column[] {
+  return [
+    { status: 'todo', label: 'To do', tint: accents.coral, icon: 'circle' },
+    { status: 'in_progress', label: 'In progress', tint: accents.amber, icon: 'loader' },
+    { status: 'done', label: 'Done', tint: accents.green, icon: 'check-circle' },
+  ];
+}
 
 const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
   todo: 'in_progress',
@@ -29,6 +39,9 @@ const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
 
 export default function TaskBoardScreen({ navigation }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const COLUMNS = getColumns(colors.accents);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,44 +169,53 @@ export default function TaskBoardScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  board: { padding: spacing.lg, gap: spacing.md },
-  column: {
-    width: 232,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    maxHeight: '100%',
-  },
-  columnHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
-  columnTitle: { ...typography.label, flex: 1 },
-  countBadge: { minWidth: 20, height: 20, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  countText: { color: colors.textOnPrimary, fontSize: 11, fontWeight: '700' },
-  columnList: { maxHeight: 520 },
-  emptySection: { color: colors.textMuted, fontSize: 13 },
-  taskCard: { marginBottom: spacing.sm, backgroundColor: colors.surface },
-  cardTitle: { ...typography.body, fontWeight: '600' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  cardMeta: { ...typography.caption },
-  advanceButton: {
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  advanceButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 12.5 },
-  newButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    margin: spacing.lg,
-    marginTop: 0,
-  },
-  newButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
-  error: { color: colors.danger, textAlign: 'center', padding: spacing.md },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+    board: { padding: spacing.lg, gap: spacing.md },
+    column: {
+      width: 232,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      maxHeight: '100%',
+    },
+    columnHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+    columnTitle: { ...typography.label, flex: 1 },
+    countBadge: {
+      minWidth: 20,
+      height: 20,
+      borderRadius: radius.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    countText: { color: colors.textOnPrimary, fontSize: 11, fontWeight: '700' },
+    columnList: { maxHeight: 520 },
+    emptySection: { color: colors.textMuted, fontSize: 13 },
+    taskCard: { marginBottom: spacing.sm, backgroundColor: colors.surface },
+    cardTitle: { ...typography.body, fontWeight: '600' },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    cardMeta: { ...typography.caption, color: colors.textMuted },
+    advanceButton: {
+      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      alignItems: 'center',
+      marginTop: spacing.xs,
+    },
+    advanceButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 12.5 },
+    newButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      margin: spacing.lg,
+      marginTop: 0,
+    },
+    newButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    error: { color: colors.danger, textAlign: 'center', padding: spacing.md },
+  });
+}

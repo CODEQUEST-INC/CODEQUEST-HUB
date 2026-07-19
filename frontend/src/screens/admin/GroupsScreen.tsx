@@ -1,6 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { assignGroupMembers, createGroup, GroupResponse, listGroupsByCohort, setGroupLeader } from '../../api/groups';
 import { UserSearchResult } from '../../api/users';
 import { useAuth } from '../../auth/AuthContext';
@@ -9,10 +11,12 @@ import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import UserPicker from '../../components/UserPicker';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
-import { colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 export default function GroupsScreen() {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [cohortId, setCohortId] = useState<string | null>(null);
   const [groups, setGroups] = useState<GroupResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -105,7 +109,7 @@ export default function GroupsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -186,45 +190,47 @@ export default function GroupsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
-  cardTitle: { ...typography.body, fontWeight: '600' },
-  cardMeta: { ...typography.caption },
-  hint: { ...typography.caption },
-  memberRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  memberChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  memberChipText: { ...typography.caption, color: colors.text },
-  selectedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  selectedName: { ...typography.body, fontWeight: '600', flex: 1 },
-  changeLink: { ...typography.caption, color: colors.primary, fontWeight: '600' },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    fontSize: 15,
-    backgroundColor: colors.surface,
-  },
-  button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
-  emptyText: { color: colors.textMuted, textAlign: 'center' },
-  error: { color: colors.danger },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    cardTitle: { ...typography.body, fontWeight: '600' },
+    cardMeta: { ...typography.caption, color: colors.textMuted },
+    hint: { ...typography.caption, color: colors.textMuted },
+    memberRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    memberChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.pill,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+    },
+    memberChipText: { ...typography.caption, color: colors.text },
+    selectedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+    },
+    selectedName: { ...typography.body, fontWeight: '600', flex: 1 },
+    changeLink: { ...typography.caption, color: colors.primary, fontWeight: '600' },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      padding: spacing.md,
+      fontSize: 15,
+      backgroundColor: colors.surface,
+    },
+    button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
+    emptyText: { color: colors.textMuted, textAlign: 'center' },
+    error: { color: colors.danger },
+  });
+}

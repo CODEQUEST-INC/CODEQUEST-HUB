@@ -2,7 +2,9 @@ import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
 import { getMyGroup } from '../../api/groups';
 import { getMyProposal, ProposalResponse } from '../../api/proposals';
@@ -17,12 +19,14 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import EmptyState from '../../components/EmptyState';
 import { ShowcaseStackParamList } from '../../navigation/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<ShowcaseStackParamList, 'ShowcaseEdit'>;
 
 export default function ShowcaseEditScreen({ navigation }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [loading, setLoading] = useState(true);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [proposal, setProposal] = useState<ProposalResponse | null>(null);
@@ -154,7 +158,7 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
   const photo = resolvePhotoUrl(entry?.photoUrl ?? null);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.label}>Title</Text>
       <TextInput
         style={styles.input}
@@ -235,54 +239,56 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  label: { ...typography.body, fontWeight: '600', marginTop: spacing.sm },
-  photoLabel: { marginTop: spacing.xl },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 16,
-    backgroundColor: colors.surface,
-  },
-  multiline: { minHeight: 90, textAlignVertical: 'top' },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginTop: spacing.sm,
-  },
-  secondaryButtonText: { color: colors.primary, fontWeight: '600' },
-  dangerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginTop: spacing.xl,
-  },
-  dangerButtonText: { color: colors.danger, fontWeight: '600' },
-  preview: { width: '100%', aspectRatio: 16 / 10, borderRadius: radius.lg, marginTop: spacing.sm },
-  hint: { ...typography.caption },
-  error: { color: colors.danger },
-  link: { color: colors.primary, textAlign: 'center', marginTop: spacing.xl, fontWeight: '600' },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+    label: { ...typography.body, fontWeight: '600', marginTop: spacing.sm },
+    photoLabel: { marginTop: spacing.xl },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      fontSize: 16,
+      backgroundColor: colors.surface,
+    },
+    multiline: { minHeight: 90, textAlignVertical: 'top' },
+    button: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.md,
+    },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    secondaryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.sm,
+    },
+    secondaryButtonText: { color: colors.primary, fontWeight: '600' },
+    dangerButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.xl,
+    },
+    dangerButtonText: { color: colors.danger, fontWeight: '600' },
+    preview: { width: '100%', aspectRatio: 16 / 10, borderRadius: radius.lg, marginTop: spacing.sm },
+    hint: { ...typography.caption, color: colors.textMuted },
+    error: { color: colors.danger },
+    link: { color: colors.primary, textAlign: 'center', marginTop: spacing.xl, fontWeight: '600' },
+  });
+}

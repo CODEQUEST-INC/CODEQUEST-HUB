@@ -1,16 +1,20 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
 import { ProposalContentRequest, resubmitProposal, submitProposal } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import { ProposalStackParamList } from '../../navigation/types';
-import { colors, radius, spacing } from '../../theme';
+import { Colors, radius, spacing, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<ProposalStackParamList, 'ProposalForm'>;
 
 export default function ProposalFormScreen({ route, navigation }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { mode } = route.params;
   const existing = mode === 'resubmit' ? route.params.proposal : null;
 
@@ -45,7 +49,7 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.label}>Title</Text>
       <TextInput
         style={styles.input}
@@ -97,25 +101,27 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
-  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: spacing.xs },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 16,
-    backgroundColor: colors.surface,
-  },
-  multiline: { minHeight: 90, textAlignVertical: 'top' },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
-  error: { color: colors.danger },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    label: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: spacing.xs },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      fontSize: 16,
+      backgroundColor: colors.surface,
+    },
+    multiline: { minHeight: 90, textAlignVertical: 'top' },
+    button: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+    },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    error: { color: colors.danger },
+  });
+}

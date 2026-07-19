@@ -1,14 +1,15 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import Text from '../../components/Text';
 import { getGroupById } from '../../api/groups';
 import { getSupervisorProposals, ProposalResponse, ProposalStatus } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
 import StatusBadge from '../../components/StatusBadge';
 import { SupervisorStackParamList } from '../../navigation/types';
-import { AccentSwatch, accents, colors, spacing, typography } from '../../theme';
+import { AccentSwatch, Colors, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<SupervisorStackParamList, 'ReviewQueue'>;
 
@@ -17,17 +18,22 @@ interface Row {
   groupLabel: string;
 }
 
-const STATUS_TINT: Record<ProposalStatus, AccentSwatch> = {
-  draft: accents.violet,
-  submitted: accents.violet,
-  under_review: accents.amber,
-  changes_requested: accents.amber,
-  approved: accents.green,
-  rejected: { accent: colors.danger, tint: colors.dangerTint, fg: colors.danger },
-};
+function getStatusTint(colors: Colors): Record<ProposalStatus, AccentSwatch> {
+  return {
+    draft: colors.accents.violet,
+    submitted: colors.accents.violet,
+    under_review: colors.accents.amber,
+    changes_requested: colors.accents.amber,
+    approved: colors.accents.green,
+    rejected: { accent: colors.danger, tint: colors.dangerTint, fg: colors.danger },
+  };
+}
 
 export default function ReviewQueueScreen({ navigation }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const STATUS_TINT = getStatusTint(colors);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +86,7 @@ export default function ReviewQueueScreen({ navigation }: Props) {
 
   return (
     <FlatList
+      style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={styles.list}
       data={rows}
       keyExtractor={(r) => r.proposal.id}
@@ -100,12 +107,14 @@ export default function ReviewQueueScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  list: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
-  cardTitle: { ...typography.body, fontWeight: '600', flexShrink: 1 },
-  cardMeta: { ...typography.caption },
-  emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
-  error: { color: colors.danger, textAlign: 'center' },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    list: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
+    cardTitle: { ...typography.body, fontWeight: '600', flexShrink: 1 },
+    cardMeta: { ...typography.caption, color: colors.textMuted },
+    emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
+    error: { color: colors.danger, textAlign: 'center' },
+  });
+}

@@ -1,16 +1,21 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
 import { GroupResponse, listGroupsByCohort } from '../../api/groups';
 import { getMyScorecard, JudgingCriterion, listCriteria, ScoreEntry, submitScorecard } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import ProgressBar from '../../components/ProgressBar';
-import { accentList, colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 export default function ScorecardScreen() {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const accentList = Object.values(colors.accents);
   const [cohortId, setCohortId] = useState<string | null>(null);
   const [groups, setGroups] = useState<GroupResponse[]>([]);
   const [groupId, setGroupId] = useState<string | null>(null);
@@ -92,7 +97,7 @@ export default function ScorecardScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.label}>Cohort</Text>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
@@ -169,38 +174,40 @@ export default function ScorecardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
-  label: { ...typography.subheading, fontSize: 14, marginTop: spacing.sm },
-  row: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.text },
-  chipTextSelected: { color: colors.textOnPrimary },
-  scoreCard: { marginTop: spacing.md, gap: spacing.lg },
-  scoreRow: { gap: spacing.sm },
-  scoreRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  criterionName: { ...typography.body, flex: 1 },
-  criterionWeight: { color: colors.textMuted },
-  scoreInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    width: 60,
-    textAlign: 'center',
-    backgroundColor: colors.surface,
-  },
-  button: { backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.lg, alignItems: 'center' },
-  buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
-  emptyText: { color: colors.textMuted },
-  error: { color: colors.danger },
-  successRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  success: { color: colors.accents.green.fg },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+    label: { ...typography.subheading, fontSize: 14, marginTop: spacing.sm },
+    row: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
+    chip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.pill,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipText: { color: colors.text },
+    chipTextSelected: { color: colors.textOnPrimary },
+    scoreCard: { marginTop: spacing.md, gap: spacing.lg },
+    scoreRow: { gap: spacing.sm },
+    scoreRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+    criterionName: { ...typography.body, flex: 1 },
+    criterionWeight: { color: colors.textMuted },
+    scoreInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      padding: spacing.sm,
+      width: 60,
+      textAlign: 'center',
+      backgroundColor: colors.surface,
+    },
+    button: { backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.lg, alignItems: 'center' },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    emptyText: { color: colors.textMuted },
+    error: { color: colors.danger },
+    successRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    success: { color: colors.accents.green.fg },
+  });
+}

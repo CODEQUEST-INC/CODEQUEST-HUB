@@ -1,19 +1,22 @@
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '../../components/Text';
 import { resolvePhotoUrl } from '../../api/showcase';
 import { ShowcaseStackParamList } from '../../navigation/types';
-import { colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<ShowcaseStackParamList, 'ShowcaseDetail'>;
 
 export default function ShowcaseDetailScreen({ route }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { entry } = route.params;
   const photo = resolvePhotoUrl(entry.photoUrl);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       {photo ? (
         <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
       ) : (
@@ -35,23 +38,25 @@ export default function ShowcaseDetailScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
-  photo: { width: '100%', aspectRatio: 16 / 10, borderRadius: radius.lg, marginBottom: spacing.md },
-  photoPlaceholder: { backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
-  title: { ...typography.heading, fontSize: 22 },
-  meta: { ...typography.caption },
-  body: { ...typography.body, color: colors.textMuted, marginTop: spacing.md },
-  linkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginTop: spacing.xl,
-  },
-  linkButtonText: { color: colors.primary, fontWeight: '600' },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.sm, backgroundColor: colors.bg },
+    photo: { width: '100%', aspectRatio: 16 / 10, borderRadius: radius.lg, marginBottom: spacing.md },
+    photoPlaceholder: { backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
+    title: { ...typography.heading, fontSize: 22 },
+    meta: { ...typography.caption, color: colors.textMuted },
+    body: { ...typography.body, color: colors.textMuted, marginTop: spacing.md },
+    linkButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.xl,
+    },
+    linkButtonText: { color: colors.primary, fontWeight: '600' },
+  });
+}

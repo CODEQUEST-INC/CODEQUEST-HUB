@@ -6,8 +6,9 @@ import DashboardScreen from '../screens/DashboardScreen';
 import GroupWorkspaceScreen from '../screens/GroupWorkspaceScreen';
 import LeaderboardScreen from '../screens/admin/LeaderboardScreen';
 import ScorecardScreen from '../screens/judge/ScorecardScreen';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 import AdminStack from './AdminStack';
+import { headerProfileButton } from './headerProfileButton';
 import ProposalStack from './ProposalStack';
 import ShowcaseStack from './ShowcaseStack';
 import SupervisorStack from './SupervisorStack';
@@ -24,9 +25,19 @@ function tabIcon(outline: keyof typeof Ionicons.glyphMap, filled: keyof typeof I
 
 export default function MainTabs() {
   const { user } = useAuth();
+  const { colors } = useTheme();
 
   return (
-    <Tab.Navigator screenOptions={{ headerShown: true, tabBarInactiveTintColor: colors.tabBarInactive }}>
+    <Tab.Navigator
+      screenOptions={({ navigation }) => ({
+        headerShown: true,
+        tabBarInactiveTintColor: colors.tabBarInactive,
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        headerRight: headerProfileButton(navigation),
+      })}
+    >
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}

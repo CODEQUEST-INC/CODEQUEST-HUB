@@ -2,12 +2,13 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import Text from '../../components/Text';
 import { getProposalHistory, ProposalVersionResponse } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
 import { ProposalStackParamList } from '../../navigation/types';
-import { accents, colors, spacing, typography } from '../../theme';
+import { Colors, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<ProposalStackParamList, 'ProposalHistory'>;
 
@@ -18,15 +19,20 @@ const ACTION_ICON: Record<string, React.ComponentProps<typeof Feather>['name']> 
   changes_requested: 'edit-3',
 };
 
-const ACTION_TINT: Record<string, string> = {
-  submitted: accents.violet.fg,
-  approved: accents.green.fg,
-  rejected: colors.danger,
-  changes_requested: accents.amber.fg,
-};
+function getActionTint(colors: Colors): Record<string, string> {
+  return {
+    submitted: colors.accents.violet.fg,
+    approved: colors.accents.green.fg,
+    rejected: colors.danger,
+    changes_requested: colors.accents.amber.fg,
+  };
+}
 
 export default function ProposalHistoryScreen({ route }: Props) {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const ACTION_TINT = getActionTint(colors);
   const { proposalId } = route.params;
   const [versions, setVersions] = useState<ProposalVersionResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +68,7 @@ export default function ProposalHistoryScreen({ route }: Props) {
 
   return (
     <FlatList
+      style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={styles.list}
       data={[...versions].reverse()}
       keyExtractor={(v) => v.id}
@@ -86,13 +93,15 @@ export default function ProposalHistoryScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  list: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  cardTitle: { fontWeight: '600', fontSize: 14, textTransform: 'capitalize' },
-  cardMeta: { ...typography.caption, marginTop: 2 },
-  feedback: { ...typography.body, color: colors.text, marginTop: spacing.sm },
-  emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
-  error: { color: colors.danger, textAlign: 'center' },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    list: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    cardTitle: { fontWeight: '600', fontSize: 14, textTransform: 'capitalize' },
+    cardMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+    feedback: { ...typography.body, color: colors.text, marginTop: spacing.sm },
+    emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
+    error: { color: colors.danger, textAlign: 'center' },
+  });
+}

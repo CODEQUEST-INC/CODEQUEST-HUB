@@ -1,16 +1,19 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import Text from '../components/Text';
 import { getMyGroup, GroupResponse } from '../api/groups';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useUserNames, userLabel } from '../hooks/useUserNames';
 import Avatar from '../components/Avatar';
 import EmptyState from '../components/EmptyState';
-import { colors, spacing, typography } from '../theme';
+import { Colors, spacing, typography, useTheme } from '../theme';
 
 export default function GroupWorkspaceScreen() {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,25 +108,27 @@ export default function GroupWorkspaceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: spacing.xxl, backgroundColor: colors.bg },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  title: { ...typography.heading, fontSize: 20 },
-  subtitle: { ...typography.caption, marginTop: spacing.xs },
-  meta: { ...typography.caption, marginTop: 2 },
-  sectionHeading: { ...typography.subheading, marginTop: spacing.xl, marginBottom: spacing.sm },
-  memberList: { flex: 1 },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  memberTextWrap: { flex: 1 },
-  memberText: { ...typography.body, fontWeight: '600' },
-  leaderLabel: { ...typography.caption, color: colors.primaryForeground, marginTop: 1 },
-  emptyText: { color: colors.textMuted, textAlign: 'center' },
-  error: { color: colors.danger, textAlign: 'center' },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, padding: spacing.xxl, backgroundColor: colors.bg },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+    title: { ...typography.heading, fontSize: 20 },
+    subtitle: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
+    meta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+    sectionHeading: { ...typography.subheading, marginTop: spacing.xl, marginBottom: spacing.sm },
+    memberList: { flex: 1 },
+    memberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    memberTextWrap: { flex: 1 },
+    memberText: { ...typography.body, fontWeight: '600' },
+    leaderLabel: { ...typography.caption, color: colors.primaryForeground, marginTop: 1 },
+    emptyText: { color: colors.textMuted, textAlign: 'center' },
+    error: { color: colors.danger, textAlign: 'center' },
+  });
+}

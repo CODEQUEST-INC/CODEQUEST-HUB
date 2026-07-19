@@ -1,10 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { accentList, AccentSwatch } from '../theme';
+import { StyleSheet, View } from 'react-native';
+import Text from './Text';
+import { AccentSwatch, useTheme } from '../theme';
 
 // Stable, deterministic color pick so the same person always gets the same
 // color across screens/sessions without needing a persisted assignment.
-function colorForKey(key: string): AccentSwatch {
+function colorForKey(key: string, accentList: AccentSwatch[]): AccentSwatch {
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     hash = (hash << 5) - hash + key.charCodeAt(i);
@@ -27,7 +28,8 @@ interface AvatarProps {
 }
 
 export default function Avatar({ name, size = 36, color }: AvatarProps) {
-  const swatch = color ?? colorForKey(name);
+  const { colors } = useTheme();
+  const swatch = color ?? colorForKey(name, Object.values(colors.accents));
   return (
     <View
       style={[

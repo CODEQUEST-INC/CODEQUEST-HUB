@@ -1,6 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '../../components/Text';
 import { UserSearchResult } from '../../api/users';
 import { assignJudge, Judge, listJudges, removeJudge } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
@@ -9,10 +10,12 @@ import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import UserPicker from '../../components/UserPicker';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
-import { colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 export default function JudgesScreen() {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [cohortId, setCohortId] = useState<string | null>(null);
   const [judges, setJudges] = useState<Judge[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,7 +73,7 @@ export default function JudgesScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -98,18 +101,20 @@ export default function JudgesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
-  judgeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  cardTitle: { ...typography.body, fontWeight: '600', flex: 1 },
-  smallDangerButton: {
-    borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
-  emptyText: { color: colors.textMuted, textAlign: 'center' },
-  error: { color: colors.danger },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    judgeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    cardTitle: { ...typography.body, fontWeight: '600', flex: 1 },
+    smallDangerButton: {
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
+    emptyText: { color: colors.textMuted, textAlign: 'center' },
+    error: { color: colors.danger },
+  });
+}

@@ -2,19 +2,22 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '../../components/Text';
 import { Cohort, listCohorts } from '../../api/cohorts';
 import { listShowcaseEntries, resolvePhotoUrl, ShowcaseEntryResponse } from '../../api/showcase';
 import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
 import EmptyState from '../../components/EmptyState';
 import { ShowcaseStackParamList } from '../../navigation/types';
-import { accents, colors, radius, spacing, typography } from '../../theme';
+import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<ShowcaseStackParamList, 'ShowcaseGallery'>;
 
 export default function ShowcaseGalleryScreen({ navigation }: Props) {
   const { user, token } = useAuth();
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [entries, setEntries] = useState<ShowcaseEntryResponse[]>([]);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [selectedCohortId, setSelectedCohortId] = useState<string | null>(null);
@@ -75,7 +78,7 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
     <View style={styles.screen}>
       {user?.role === 'student' ? (
         <Pressable style={styles.editLink} onPress={() => navigation.navigate('ShowcaseEdit')}>
-          <Feather name="edit-3" size={14} color={accents.pink.fg} />
+          <Feather name="edit-3" size={14} color={colors.accents.pink.fg} />
           <Text style={styles.editLinkText}>My group's showcase</Text>
         </Pressable>
       ) : null}
@@ -115,7 +118,7 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
           const cohortName = cohortNameById[item.cohortId];
           return (
             <Pressable onPress={() => navigation.navigate('ShowcaseDetail', { entry: item })}>
-              <Card style={styles.card} tint={accents.pink}>
+              <Card style={styles.card} tint={colors.accents.pink}>
                 {photo ? (
                   <Image source={{ uri: photo }} style={styles.thumb} resizeMode="cover" />
                 ) : (
@@ -152,35 +155,37 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  editLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-end',
-    margin: spacing.lg,
-    marginBottom: 0,
-  },
-  editLinkText: { color: accents.pink.fg, fontWeight: '600', fontSize: 13 },
-  filterRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-  filterChip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  filterChipSelected: { backgroundColor: accents.pink.accent, borderColor: accents.pink.accent },
-  filterChipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
-  filterChipTextSelected: { color: colors.textOnPrimary },
-  list: { padding: spacing.lg, gap: spacing.md },
-  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  thumb: { width: 56, height: 56, borderRadius: radius.sm },
-  thumbPlaceholder: { backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
-  cardBody: { flex: 1 },
-  cardTitle: { ...typography.body, fontWeight: '600' },
-  cardMeta: { ...typography.caption, marginTop: 2 },
-  error: { color: colors.danger, textAlign: 'center', padding: spacing.md },
-});
+function createStyles(colors: Colors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+    editLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      alignSelf: 'flex-end',
+      margin: spacing.lg,
+      marginBottom: 0,
+    },
+    editLinkText: { color: colors.accents.pink.fg, fontWeight: '600', fontSize: 13 },
+    filterRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+    filterChip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.pill,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    filterChipSelected: { backgroundColor: colors.accents.pink.accent, borderColor: colors.accents.pink.accent },
+    filterChipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+    filterChipTextSelected: { color: colors.textOnPrimary },
+    list: { padding: spacing.lg, gap: spacing.md },
+    card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    thumb: { width: 56, height: 56, borderRadius: radius.sm },
+    thumbPlaceholder: { backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
+    cardBody: { flex: 1 },
+    cardTitle: { ...typography.body, fontWeight: '600' },
+    cardMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+    error: { color: colors.danger, textAlign: 'center', padding: spacing.md },
+  });
+}
