@@ -72,6 +72,14 @@ export default function ScorecardScreen() {
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load your existing scorecard'));
   }, [token, groupId]);
 
+  // maxLength alone only caps digit count ("78" is 2 digits, same as "10") —
+  // reject any keystroke that would make the value fall outside 1-10 rather
+  // than catching it only at submit time.
+  const onChangeScore = (criterionId: string, raw: string) => {
+    if (raw !== '' && (!/^\d{1,2}$/.test(raw) || parseInt(raw, 10) > 10)) return;
+    setScores((prev) => ({ ...prev, [criterionId]: raw }));
+  };
+
   const onSubmit = async () => {
     if (!token || !groupId) return;
     const entries: ScoreEntry[] = [];
@@ -142,7 +150,7 @@ export default function ScorecardScreen() {
                   <TextInput
                     style={styles.scoreInput}
                     value={scores[c.id] ?? ''}
-                    onChangeText={(v) => setScores((prev) => ({ ...prev, [c.id]: v }))}
+                    onChangeText={(v) => onChangeScore(c.id, v)}
                     keyboardType="numeric"
                     placeholder="1-10"
                     maxLength={2}
