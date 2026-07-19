@@ -66,7 +66,7 @@ class JudgingServiceTest {
 
         assertThatThrownBy(() -> service().createCriterion(req))
             .isInstanceOf(ResponseStatusException.class)
-            .hasMessageContaining("cannot exceed 100");
+            .hasMessageContaining("leaving 30 available");
     }
 
     @Test
