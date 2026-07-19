@@ -2,10 +2,10 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
-import { getMyProposal, ProposalResponse, ProposalStatus } from '../../api/proposals';
+import { getMyProposal, ProposalResponse, ProposalStatus, resolveProposalPdfUrl } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import EmptyState from '../../components/EmptyState';
 import StatusBadge from '../../components/StatusBadge';
@@ -129,6 +129,16 @@ export default function ProposalStatusScreen({ navigation }: Props) {
 
       <Text style={styles.sectionHeading}>Tech stack</Text>
       <Text style={styles.body}>{proposal.techStack}</Text>
+
+      {proposal.pdfUrl ? (
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => Linking.openURL(resolveProposalPdfUrl(proposal.pdfUrl)!)}
+        >
+          <Feather name="file-text" size={15} color={colors.primary} />
+          <Text style={styles.secondaryButtonText}>View PDF attachment</Text>
+        </Pressable>
+      ) : null}
 
       <Pressable
         style={styles.secondaryButton}

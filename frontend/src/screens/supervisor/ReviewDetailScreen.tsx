@@ -1,9 +1,10 @@
+import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
-import { reviewProposal, ReviewAction } from '../../api/proposals';
+import { resolveProposalPdfUrl, reviewProposal, ReviewAction } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 import { SupervisorStackParamList } from '../../navigation/types';
@@ -56,6 +57,16 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
 
       <Text style={styles.sectionHeading}>Tech stack</Text>
       <Text style={styles.body}>{proposal.techStack}</Text>
+
+      {proposal.pdfUrl ? (
+        <Pressable
+          style={styles.pdfButton}
+          onPress={() => Linking.openURL(resolveProposalPdfUrl(proposal.pdfUrl)!)}
+        >
+          <Feather name="file-text" size={15} color={colors.primary} />
+          <Text style={styles.pdfButtonText}>View PDF attachment</Text>
+        </Pressable>
+      ) : null}
 
       {canReview ? (
         <>
@@ -127,6 +138,18 @@ function createStyles(colors: Colors) {
       backgroundColor: colors.surface,
     },
     error: { color: colors.danger, marginTop: spacing.sm },
+    pdfButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.lg,
+    },
+    pdfButtonText: { color: colors.primary, fontWeight: '600' },
     approveButton: {
       backgroundColor: colors.accents.green.accent,
       borderRadius: radius.md,

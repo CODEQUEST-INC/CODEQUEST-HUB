@@ -6,13 +6,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -78,22 +82,29 @@ class ProposalServiceIntegrationTest {
             "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", groupId, userId);
 
         String token = jwtUtil.generateToken(userId.toString(), "student@example.test", "student");
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
 
-        Map<String, String> body = Map.of(
-            "title", "Integration Test Proposal",
-            "problemStatement", "A problem statement that is definitely long enough to pass validation.",
-            "objectives", "Objectives long enough to pass",
-            "techStack", "Spring Boot, Postgres");
+        HttpHeaders multipartHeaders = new HttpHeaders();
+        multipartHeaders.setBearerAuth(token);
+        multipartHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        HttpHeaders authOnlyHeaders = new HttpHeaders();
+        authOnlyHeaders.setBearerAuth(token);
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("title", "Integration Test Proposal");
+        body.add("problemStatement", "A problem statement that is definitely long enough to pass validation.");
+        body.add("objectives", "Objectives long enough to pass");
+        body.add("techStack", "Spring Boot, Postgres");
+        body.add("file", pdfPart());
 
         ResponseEntity<Map> submitResponse = restTemplate.exchange(
-            "/api/proposals", HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
+            "/api/proposals", HttpMethod.POST, new HttpEntity<>(body, multipartHeaders), Map.class);
         assertThat(submitResponse.getStatusCode().value()).isEqualTo(201);
+        Map<String, Object> submitted = (Map<String, Object>) submitResponse.getBody().get("data");
+        assertThat((String) submitted.get("pdfUrl")).startsWith("/api/proposals/pdfs/").endsWith(".pdf");
 
         ResponseEntity<Map> myResponse = restTemplate.exchange(
-            "/api/proposals/my", HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+            "/api/proposals/my", HttpMethod.GET, new HttpEntity<>(authOnlyHeaders), Map.class);
         assertThat(myResponse.getStatusCode().value()).isEqualTo(200);
         Map<String, Object> data = (Map<String, Object>) myResponse.getBody().get("data");
         assertThat(data.get("title")).isEqualTo("Integration Test Proposal");
@@ -101,9 +112,25 @@ class ProposalServiceIntegrationTest {
 
         // Second submission for the same group must be rejected by the real
         // DB-backed one-proposal-per-group check, not just a mock.
+        MultiValueMap<String, Object> secondBody = new LinkedMultiValueMap<>();
+        secondBody.add("title", "Integration Test Proposal");
+        secondBody.add("problemStatement", "A problem statement that is definitely long enough to pass validation.");
+        secondBody.add("objectives", "Objectives long enough to pass");
+        secondBody.add("techStack", "Spring Boot, Postgres");
+        secondBody.add("file", pdfPart());
         ResponseEntity<Map> secondSubmit = restTemplate.exchange(
-            "/api/proposals", HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
+            "/api/proposals", HttpMethod.POST, new HttpEntity<>(secondBody, multipartHeaders), Map.class);
         assertThat(secondSubmit.getStatusCode().value()).isEqualTo(409);
+    }
+
+    private static HttpEntity<ByteArrayResource> pdfPart() {
+        ByteArrayResource resource = new ByteArrayResource(new byte[] { 1, 2, 3 }) {
+            @Override
+            public String getFilename() { return "proposal.pdf"; }
+        };
+        HttpHeaders partHeaders = new HttpHeaders();
+        partHeaders.setContentType(MediaType.APPLICATION_PDF);
+        return new HttpEntity<>(resource, partHeaders);
     }
 
     private static void applySchema(PostgreSQLContainer<?> container) {
@@ -115,6 +142,8 @@ class ProposalServiceIntegrationTest {
             "06_init_judging.sql",
             "07_init_showcase.sql",
             "08_add_criterion_active_flag.sql",
+            "09_add_group_photo.sql",
+            "10_add_proposal_pdf.sql",
         };
         Path initDir = Path.of("../database/init");
         try (Connection conn = DriverManager.getConnection(

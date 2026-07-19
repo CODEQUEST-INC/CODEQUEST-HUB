@@ -1,5 +1,6 @@
 package com.codequesthub.project.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -40,6 +41,9 @@ public class Proposal {
     @Column(name = "reviewed_by")
     private UUID reviewedBy;
 
+    @Column(name = "pdf_path", length = 255)
+    private String pdfPath;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -71,6 +75,10 @@ public class Proposal {
     public void setSubmittedBy(UUID v) { this.submittedBy = v; }
     public UUID getReviewedBy() { return reviewedBy; }
     public void setReviewedBy(UUID v) { this.reviewedBy = v; }
+    @JsonIgnore
+    public String getPdfPath() { return pdfPath; }
+    public void setPdfPath(String v) { this.pdfPath = v; }
+    public String getPdfUrl() { return pdfPath == null ? null : "/api/proposals/pdfs/" + pdfPath; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -96,6 +97,16 @@ public class GlobalExceptionHandler {
         } else if (cause instanceof DateTimeParseException dtpe) {
             message = "\"" + dtpe.getParsedString() + "\" is not a valid date — use YYYY-MM-DD (e.g. 2026-07-19)";
         }
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message, request.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    // A required multipart part (e.g. a PDF/photo attachment) was left off the
+    // request entirely — Spring rejects this before the controller method body
+    // (and its own "is required" checks) ever run.
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiError> handleMissingPart(MissingServletRequestPartException ex, HttpServletRequest request) {
+        String message = "Missing required part \"" + ex.getRequestPartName() + "\"";
         ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message, request.getRequestURI());
         return ResponseEntity.badRequest().body(body);
     }

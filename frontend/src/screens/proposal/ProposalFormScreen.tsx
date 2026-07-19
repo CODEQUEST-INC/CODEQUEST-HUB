@@ -1,10 +1,12 @@
+import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as DocumentPicker from 'expo-document-picker';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
-import { ProposalContentRequest, resubmitProposal, submitProposal } from '../../api/proposals';
+import { ProposalContentRequest, ProposalPdfFile, resubmitProposal, submitProposal } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import { ProposalStackParamList } from '../../navigation/types';
 import { Colors, radius, spacing, useTheme } from '../../theme';
@@ -22,19 +24,31 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
   const [problemStatement, setProblemStatement] = useState(existing?.problemStatement ?? '');
   const [objectives, setObjectives] = useState(existing?.objectives ?? '');
   const [techStack, setTechStack] = useState(existing?.techStack ?? '');
+  const [pdfFile, setPdfFile] = useState<ProposalPdfFile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const onPickPdf = async () => {
+    const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf' });
+    if (result.canceled || result.assets.length === 0) return;
+    const asset = result.assets[0];
+    setPdfFile({ uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'application/pdf' });
+  };
+
   const onSubmit = async () => {
     if (!token) return;
+    if (!pdfFile) {
+      setError('A PDF attachment is required.');
+      return;
+    }
     setError(null);
     setSubmitting(true);
     const req: ProposalContentRequest = { title, problemStatement, objectives, techStack };
     try {
       if (mode === 'resubmit') {
-        await resubmitProposal(existing!.id, req, token);
+        await resubmitProposal(existing!.id, req, pdfFile, token);
       } else {
-        await submitProposal(req, token);
+        await submitProposal(req, pdfFile, token);
       }
       navigation.navigate('ProposalStatus');
     } catch (e) {
@@ -88,6 +102,15 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
         placeholderTextColor={colors.textMuted}
       />
 
+      <Text style={styles.label}>PDF attachment</Text>
+      <Pressable style={styles.pdfPicker} onPress={onPickPdf}>
+        <Feather name={pdfFile ? 'file-text' : 'upload'} size={16} color={colors.primary} />
+        <Text style={styles.pdfPickerText} numberOfLines={1}>
+          {pdfFile ? pdfFile.name : 'Select a PDF (required)'}
+        </Text>
+        {pdfFile ? <Text style={styles.pdfChangeLink}>Change</Text> : null}
+      </Pressable>
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
@@ -114,6 +137,18 @@ function createStyles(colors: Colors) {
       backgroundColor: colors.surface,
     },
     multiline: { minHeight: 90, textAlignVertical: 'top' },
+    pdfPicker: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+    },
+    pdfPickerText: { flex: 1, color: colors.text },
+    pdfChangeLink: { color: colors.primary, fontWeight: '600', fontSize: 13 },
     button: {
       backgroundColor: colors.primary,
       borderRadius: radius.md,
