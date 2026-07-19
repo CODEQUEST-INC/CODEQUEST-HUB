@@ -3,6 +3,7 @@ package com.codequesthub.group.service;
 import com.codequesthub.group.dto.*;
 import com.codequesthub.group.entity.*;
 import com.codequesthub.group.repository.*;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,12 +27,17 @@ public class GroupService {
 
     private final GroupRepository groupRepo;
     private final GroupMemberRepository memberRepo;
+    private final CohortRepository cohortRepo;
+    private final UserViewRepository userViewRepo;
     private final Path uploadDir;
 
     public GroupService(GroupRepository groupRepo, GroupMemberRepository memberRepo,
+                         CohortRepository cohortRepo, UserViewRepository userViewRepo,
                          @Value("${group.upload-dir}") String uploadDir) {
         this.groupRepo = groupRepo;
         this.memberRepo = memberRepo;
+        this.cohortRepo = cohortRepo;
+        this.userViewRepo = userViewRepo;
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.uploadDir);
@@ -69,6 +75,68 @@ public class GroupService {
         g.setName(req.getName());
         g.setSupervisorId(req.getSupervisorId());
         return groupRepo.save(g);
+    }
+
+    // Admin-only, destructive: dissolves every existing group in the cohort
+    // (group_members cascades via the DB FK) and rebuilds them from scratch,
+    // chunking all students tagged with this cohort into fixed-size groups
+    // ordered by index number. Meant for initial group assignment, before any
+    // group has proposals/tasks/scores attached — those cascade-delete too.
+    @Transactional
+    public Map<String, Object> autoGroup(UUID cohortId, AutoGroupRequest req) {
+        if (!cohortRepo.existsById(cohortId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cohort not found");
+        }
+
+        List<UserView> students = new ArrayList<>(userViewRepo.findByCohortIdAndRole(cohortId, UserRole.student));
+        if (students.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "No students are registered under this cohort");
+        }
+        students.sort(Comparator.comparingLong(u -> parseIndexNumber(u.getIndexNumber())));
+
+        // flush() forces the deletes to hit the DB now — Hibernate's default
+        // action ordering runs pending inserts before pending deletes, which
+        // would otherwise collide with the (cohort_id, group_number) unique
+        // constraint when the new groups 1..N are created below.
+        groupRepo.deleteAll(groupRepo.findByCohortId(cohortId));
+        groupRepo.flush();
+
+        int groupSize = req.getGroupSize();
+        List<Map<String, Object>> created = new ArrayList<>();
+        int groupNumber = 1;
+        for (int i = 0; i < students.size(); i += groupSize) {
+            List<UserView> chunk = students.subList(i, Math.min(i + groupSize, students.size()));
+
+            Group group = new Group();
+            group.setCohortId(cohortId);
+            group.setGroupNumber(groupNumber++);
+            group = groupRepo.save(group);
+
+            List<GroupMember> members = new ArrayList<>();
+            for (UserView student : chunk) {
+                GroupMember m = new GroupMember();
+                m.setGroupId(group.getId());
+                m.setUserId(student.getId());
+                members.add(memberRepo.save(m));
+            }
+            created.add(buildGroupResponse(group, members));
+        }
+
+        return Map.of(
+            "groupsCreated", created.size(),
+            "studentsGrouped", students.size(),
+            "groups", created
+        );
+    }
+
+    private static long parseIndexNumber(String indexNumber) {
+        if (indexNumber == null) return Long.MAX_VALUE;
+        try {
+            return Long.parseLong(indexNumber.trim());
+        } catch (NumberFormatException e) {
+            return Long.MAX_VALUE;
+        }
     }
 
     public Map<String, Object> assignMembers(UUID groupId, AssignMembersRequest req) {

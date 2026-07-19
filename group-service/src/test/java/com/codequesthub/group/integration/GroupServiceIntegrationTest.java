@@ -89,6 +89,48 @@ class GroupServiceIntegrationTest {
         assertThat(groups.get(0).get("name")).isEqualTo("Integration Test Group");
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void autoGroup_rerunOnSameCohort_dissolvesAndRebuildsWithoutGroupNumberCollision() {
+        UUID cohortId = UUID.randomUUID();
+        jdbcTemplate.update(
+            "INSERT INTO cohorts (id, name, year) VALUES (?, ?, ?)", cohortId, "Auto Group Cohort", 2026);
+
+        for (int i = 1; i <= 5; i++) {
+            UUID userId = UUID.randomUUID();
+            jdbcTemplate.update(
+                "INSERT INTO users (id, full_name, email, password_hash, role, index_number, cohort_id) " +
+                "VALUES (?, ?, ?, ?, 'student', ?, ?)",
+                userId, "Student " + i, "student" + i + "-" + userId + "@example.test", "irrelevant-hash",
+                "600000" + i, cohortId);
+        }
+
+        String adminToken = jwtUtil.generateToken(UUID.randomUUID().toString(), "admin@example.test", "admin");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+        // First run: groups of 2 -> [2, 2, 1]. This alone wouldn't have caught
+        // the flush-ordering bug — it only surfaces on a second run against
+        // group numbers that already exist.
+        ResponseEntity<Map> firstRun = restTemplate.exchange(
+            "/api/groups/cohorts/" + cohortId + "/auto-group", HttpMethod.POST,
+            new HttpEntity<>(Map.of("groupSize", 2), headers), Map.class);
+        assertThat(firstRun.getStatusCode().value()).isEqualTo(200);
+
+        // Second run with a different group size: the new groups reuse group
+        // numbers 1..N, which previously collided with the not-yet-deleted
+        // old rows (Hibernate flushes inserts before deletes by default).
+        ResponseEntity<Map> secondRun = restTemplate.exchange(
+            "/api/groups/cohorts/" + cohortId + "/auto-group", HttpMethod.POST,
+            new HttpEntity<>(Map.of("groupSize", 3), headers), Map.class);
+
+        assertThat(secondRun.getStatusCode().value()).isEqualTo(200);
+        Map<String, Object> data = (Map<String, Object>) secondRun.getBody().get("data");
+        assertThat(data.get("studentsGrouped")).isEqualTo(5);
+        assertThat(data.get("groupsCreated")).isEqualTo(2); // groups of 3 -> [3, 2]
+    }
+
     private static void applySchema(PostgreSQLContainer<?> container) {
         String[] files = {
             "01_init_auth_and_groups.sql",
@@ -99,6 +141,9 @@ class GroupServiceIntegrationTest {
             "07_init_showcase.sql",
             "08_add_criterion_active_flag.sql",
             "09_add_group_photo.sql",
+            "10_add_proposal_pdf.sql",
+            "11_showcase_multiple_photos.sql",
+            "12_add_user_cohort.sql",
         };
         Path initDir = Path.of("../database/init");
         try (Connection conn = DriverManager.getConnection(

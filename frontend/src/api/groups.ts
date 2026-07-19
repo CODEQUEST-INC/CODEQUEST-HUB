@@ -44,6 +44,22 @@ export function createGroup(req: CreateGroupRequest, token: string): Promise<Gro
   return request<GroupResponse>('/api/groups', { method: 'POST', body: req, token });
 }
 
+export interface AutoGroupResult {
+  groupsCreated: number;
+  studentsGrouped: number;
+  groups: GroupResponse[];
+}
+
+// Destructive: dissolves every existing group in the cohort and rebuilds
+// them from scratch, chunking all registered students by index number.
+export function autoGroupCohort(cohortId: string, groupSize: number, token: string): Promise<AutoGroupResult> {
+  return request<AutoGroupResult>(`/api/groups/cohorts/${cohortId}/auto-group`, {
+    method: 'POST',
+    body: { groupSize },
+    token,
+  });
+}
+
 export function assignGroupMembers(
   groupId: string,
   userIds: string[],

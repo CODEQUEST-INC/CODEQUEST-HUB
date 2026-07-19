@@ -3,7 +3,14 @@ import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
-import { assignGroupMembers, createGroup, GroupResponse, listGroupsByCohort, setGroupLeader } from '../../api/groups';
+import {
+  assignGroupMembers,
+  autoGroupCohort,
+  createGroup,
+  GroupResponse,
+  listGroupsByCohort,
+  setGroupLeader,
+} from '../../api/groups';
 import { UserSearchResult } from '../../api/users';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
@@ -25,6 +32,10 @@ export default function GroupsScreen() {
   const [newNumber, setNewNumber] = useState('');
   const [newName, setNewName] = useState('');
   const [newSupervisor, setNewSupervisor] = useState<UserSearchResult | null>(null);
+
+  const [groupSize, setGroupSize] = useState('5');
+  const [confirmingAutoGroup, setConfirmingAutoGroup] = useState(false);
+  const [autoGrouping, setAutoGrouping] = useState(false);
 
   // Guards against an in-flight request for a since-abandoned cohort
   // resolving after a newer one and clobbering it with stale data.
@@ -97,6 +108,31 @@ export default function GroupsScreen() {
     }
   };
 
+  const onAutoGroup = async () => {
+    if (!token || !cohortId) return;
+    const size = parseInt(groupSize, 10);
+    if (Number.isNaN(size) || size < 1) {
+      setError('Enter a valid group size.');
+      return;
+    }
+    if (!confirmingAutoGroup) {
+      setConfirmingAutoGroup(true);
+      setTimeout(() => setConfirmingAutoGroup(false), 5000);
+      return;
+    }
+    setConfirmingAutoGroup(false);
+    setError(null);
+    setAutoGrouping(true);
+    try {
+      await autoGroupCohort(cohortId, size, token);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to auto-generate groups');
+    } finally {
+      setAutoGrouping(false);
+    }
+  };
+
   const onSetLeader = async (groupId: string, userId: string) => {
     if (!token) return;
     setError(null);
@@ -114,6 +150,33 @@ export default function GroupsScreen() {
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      {cohortId ? (
+        <Card>
+          <Text style={styles.cardTitle}>Auto-generate groups</Text>
+          <Text style={styles.hint}>
+            Dissolves every existing group in this cohort and rebuilds them from scratch, chunking all
+            registered students into fixed-size groups ordered by index number. This cannot be undone.
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={groupSize}
+            onChangeText={setGroupSize}
+            placeholder="Group size"
+            keyboardType="numeric"
+            placeholderTextColor={colors.textMuted}
+          />
+          <Pressable style={styles.dangerButton} onPress={onAutoGroup} disabled={autoGrouping}>
+            {autoGrouping ? (
+              <ActivityIndicator color={colors.danger} />
+            ) : (
+              <Text style={styles.dangerButtonText}>
+                {confirmingAutoGroup ? 'Tap again to confirm — this resets the cohort' : 'Auto-generate groups'}
+              </Text>
+            )}
+          </Pressable>
+        </Card>
+      ) : null}
 
       {groups.map((g) => (
         <Card key={g.id}>
@@ -230,6 +293,15 @@ function createStyles(colors: Colors) {
     },
     button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
     buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
+    dangerButton: {
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.sm,
+      padding: spacing.md,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+    },
+    dangerButtonText: { color: colors.danger, fontWeight: '600' },
     emptyText: { color: colors.textMuted, textAlign: 'center' },
     error: { color: colors.danger },
   });

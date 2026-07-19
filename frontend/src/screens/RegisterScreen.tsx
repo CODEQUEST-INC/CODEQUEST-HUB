@@ -1,9 +1,10 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../components/TextInput';
 import Text from '../components/Text';
 import { UserRole } from '../api/auth';
+import { Cohort, listCohorts } from '../api/cohorts';
 import { useAuth } from '../auth/AuthContext';
 import { AuthStackParamList } from '../navigation/types';
 import { Colors, radius, spacing, typography, useTheme } from '../theme';
@@ -20,14 +21,47 @@ export default function RegisterScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('student');
+  const [indexNumber, setIndexNumber] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [cohorts, setCohorts] = useState<Cohort[]>([]);
+  const [cohortId, setCohortId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    listCohorts()
+      .then((list) => {
+        setCohorts(list);
+        if (list.length > 0) setCohortId(list[0].id);
+      })
+      .catch(() => {});
+  }, []);
+
   const onSubmit = async () => {
+    if (role === 'student' && !indexNumber.trim()) {
+      setError('Index number is required for students.');
+      return;
+    }
+    if (role === 'student' && !studentId.trim()) {
+      setError('Student ID is required for students.');
+      return;
+    }
+    if (role === 'student' && !cohortId) {
+      setError('Select a cohort.');
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
-      await register({ fullName: fullName.trim(), email: email.trim(), password, role });
+      await register({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        password,
+        role,
+        indexNumber: role === 'student' ? indexNumber.trim() : undefined,
+        studentId: role === 'student' ? studentId.trim() : undefined,
+        cohortId: role === 'student' ? cohortId ?? undefined : undefined,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Registration failed');
     } finally {
@@ -77,6 +111,45 @@ export default function RegisterScreen({ navigation }: Props) {
         ))}
       </View>
 
+      {role === 'student' ? (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="Index number"
+            placeholderTextColor={colors.textMuted}
+            value={indexNumber}
+            onChangeText={setIndexNumber}
+            keyboardType="numeric"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Student ID"
+            placeholderTextColor={colors.textMuted}
+            value={studentId}
+            onChangeText={setStudentId}
+          />
+
+          <Text style={styles.label}>Cohort</Text>
+          {cohorts.length === 0 ? (
+            <Text style={styles.hint}>No cohorts available yet — contact an admin.</Text>
+          ) : (
+            <View style={styles.roleRow}>
+              {cohorts.map((c) => (
+                <Pressable
+                  key={c.id}
+                  style={[styles.roleChip, cohortId === c.id && styles.roleChipSelected]}
+                  onPress={() => setCohortId(c.id)}
+                >
+                  <Text style={[styles.roleChipText, cohortId === c.id && styles.roleChipTextSelected]}>
+                    {c.name} ({c.year})
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </>
+      ) : null}
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
@@ -119,6 +192,7 @@ function createStyles(colors: Colors) {
       backgroundColor: colors.surface,
     },
     label: { ...typography.body, fontWeight: '600', color: colors.text, marginTop: spacing.xs },
+    hint: { ...typography.caption, color: colors.textMuted },
     roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     roleChip: {
       borderWidth: 1,

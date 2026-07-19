@@ -144,6 +144,8 @@ class ProposalServiceIntegrationTest {
             "08_add_criterion_active_flag.sql",
             "09_add_group_photo.sql",
             "10_add_proposal_pdf.sql",
+            "11_showcase_multiple_photos.sql",
+            "12_add_user_cohort.sql",
         };
         Path initDir = Path.of("../database/init");
         try (Connection conn = DriverManager.getConnection(

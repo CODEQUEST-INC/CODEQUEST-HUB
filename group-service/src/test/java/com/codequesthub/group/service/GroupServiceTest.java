@@ -1,10 +1,15 @@
 package com.codequesthub.group.service;
 
+import com.codequesthub.group.dto.AutoGroupRequest;
 import com.codequesthub.group.dto.CreateGroupRequest;
 import com.codequesthub.group.dto.SetGroupLeaderRequest;
 import com.codequesthub.group.entity.Group;
+import com.codequesthub.group.entity.UserRole;
+import com.codequesthub.group.entity.UserView;
+import com.codequesthub.group.repository.CohortRepository;
 import com.codequesthub.group.repository.GroupMemberRepository;
 import com.codequesthub.group.repository.GroupRepository;
+import com.codequesthub.group.repository.UserViewRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -29,6 +35,8 @@ class GroupServiceTest {
 
     @Mock private GroupRepository groupRepo;
     @Mock private GroupMemberRepository memberRepo;
+    @Mock private CohortRepository cohortRepo;
+    @Mock private UserViewRepository userViewRepo;
 
     @TempDir
     Path uploadDir;
@@ -37,7 +45,15 @@ class GroupServiceTest {
     // MockitoExtension injects @Mock fields, so groupRepo/memberRepo would
     // still be null at that point.
     private GroupService groupService() {
-        return new GroupService(groupRepo, memberRepo, uploadDir.toString());
+        return new GroupService(groupRepo, memberRepo, cohortRepo, userViewRepo, uploadDir.toString());
+    }
+
+    private UserView studentWith(String indexNumber) {
+        UserView u = new UserView();
+        ReflectionTestUtils.setField(u, "id", UUID.randomUUID());
+        ReflectionTestUtils.setField(u, "indexNumber", indexNumber);
+        ReflectionTestUtils.setField(u, "role", UserRole.student);
+        return u;
     }
 
     private Group groupWith(UUID id, UUID supervisorId) {
@@ -146,6 +162,69 @@ class GroupServiceTest {
         assertThat(created.getCohortId()).isEqualTo(cohortId);
         assertThat(created.getGroupNumber()).isEqualTo(130);
         assertThat(created.getName()).isEqualTo("Group 130");
+    }
+
+    @Test
+    void autoGroup_cohortNotFound_notFound() {
+        UUID cohortId = UUID.randomUUID();
+        when(cohortRepo.existsById(cohortId)).thenReturn(false);
+
+        AutoGroupRequest req = new AutoGroupRequest();
+        req.setGroupSize(5);
+
+        assertThatThrownBy(() -> groupService().autoGroup(cohortId, req))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("Cohort not found");
+    }
+
+    @Test
+    void autoGroup_noStudentsInCohort_badRequest() {
+        UUID cohortId = UUID.randomUUID();
+        when(cohortRepo.existsById(cohortId)).thenReturn(true);
+        when(userViewRepo.findByCohortIdAndRole(cohortId, UserRole.student)).thenReturn(List.of());
+
+        AutoGroupRequest req = new AutoGroupRequest();
+        req.setGroupSize(5);
+
+        assertThatThrownBy(() -> groupService().autoGroup(cohortId, req))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("No students are registered");
+    }
+
+    @Test
+    void autoGroup_chunksStudentsByIndexNumberOrder_andDissolvesExistingGroups() {
+        UUID cohortId = UUID.randomUUID();
+        when(cohortRepo.existsById(cohortId)).thenReturn(true);
+
+        // Deliberately out of order and including a non-numeric index number —
+        // the sort must still put them in ascending numeric order, with the
+        // unparsable one pushed to the very end.
+        UserView s5 = studentWith("5");
+        UserView s1 = studentWith("1");
+        UserView s3 = studentWith("3");
+        UserView s2 = studentWith("2");
+        UserView sBad = studentWith("not-a-number");
+        when(userViewRepo.findByCohortIdAndRole(cohortId, UserRole.student))
+            .thenReturn(List.of(s5, s1, s3, s2, sBad));
+
+        Group existingGroup = new Group();
+        ReflectionTestUtils.setField(existingGroup, "id", UUID.randomUUID());
+        when(groupRepo.findByCohortId(cohortId)).thenReturn(List.of(existingGroup));
+        when(groupRepo.save(any())).thenAnswer(inv -> {
+            Group g = inv.getArgument(0);
+            ReflectionTestUtils.setField(g, "id", UUID.randomUUID());
+            return g;
+        });
+        when(memberRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AutoGroupRequest req = new AutoGroupRequest();
+        req.setGroupSize(2);
+
+        Map<String, Object> result = groupService().autoGroup(cohortId, req);
+
+        assertThat(result.get("studentsGrouped")).isEqualTo(5);
+        // 5 students in groups of 2 -> groups of [2, 2, 1]
+        assertThat(result.get("groupsCreated")).isEqualTo(3);
     }
 
     @Test

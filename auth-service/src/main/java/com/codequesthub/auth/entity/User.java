@@ -31,6 +31,9 @@ public class User {
     @Column(name = "index_number", length = 50)
     private String indexNumber;
 
+    @Column(name = "cohort_id")
+    private UUID cohortId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -61,6 +64,8 @@ public class User {
     public void setStudentId(String v) { this.studentId = v; }
     public String getIndexNumber() { return indexNumber; }
     public void setIndexNumber(String v) { this.indexNumber = v; }
+    public UUID getCohortId() { return cohortId; }
+    public void setCohortId(UUID v) { this.cohortId = v; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

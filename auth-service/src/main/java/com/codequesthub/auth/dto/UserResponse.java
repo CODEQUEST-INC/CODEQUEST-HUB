@@ -11,6 +11,7 @@ public class UserResponse {
     private String role;
     private String studentId;
     private String indexNumber;
+    private UUID cohortId;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -22,6 +23,7 @@ public class UserResponse {
         r.role = u.getRole().name();
         r.studentId = u.getStudentId();
         r.indexNumber = u.getIndexNumber();
+        r.cohortId = u.getCohortId();
         r.createdAt = u.getCreatedAt();
         r.updatedAt = u.getUpdatedAt();
         return r;
@@ -33,6 +35,7 @@ public class UserResponse {
     public String getRole() { return role; }
     public String getStudentId() { return studentId; }
     public String getIndexNumber() { return indexNumber; }
+    public UUID getCohortId() { return cohortId; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

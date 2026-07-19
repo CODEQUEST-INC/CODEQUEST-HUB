@@ -44,6 +44,15 @@ public class GroupController {
             .body(Map.of("data", groupService.assignMembers(groupId, req)));
     }
 
+    // admin only — dissolves and rebuilds every group in the cohort from
+    // scratch, chunking all of the cohort's registered students into
+    // fixed-size groups ordered by index number.
+    @PostMapping("/cohorts/{cohortId}/auto-group")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> autoGroup(@PathVariable UUID cohortId, @Valid @RequestBody AutoGroupRequest req) {
+        return ResponseEntity.ok(Map.of("data", groupService.autoGroup(cohortId, req)));
+    }
+
     // any authenticated user — list groups in a cohort (e.g. for a judge picking a group to score)
     @GetMapping
     public ResponseEntity<?> listByCohort(@RequestParam UUID cohortId) {

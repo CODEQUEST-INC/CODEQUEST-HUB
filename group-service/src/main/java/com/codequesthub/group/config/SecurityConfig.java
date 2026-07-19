@@ -5,6 +5,7 @@ import com.codequesthub.common.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -35,6 +36,9 @@ public class SecurityConfig {
                 // React Native's <Image> can't attach an Authorization header to
                 // its own request — everything else about a group stays private.
                 .requestMatchers("/api/groups/health", "/api/groups/photos/**", "/error").permitAll()
+                // Registration needs to show a cohort picker before the user has a
+                // token — cohort name/year isn't sensitive, so the list is public.
+                .requestMatchers(HttpMethod.GET, "/api/cohorts").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

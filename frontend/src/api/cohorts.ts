@@ -8,8 +8,11 @@ export interface Cohort {
   createdAt: string;
 }
 
-export function listCohorts(token: string): Promise<Cohort[]> {
-  return request<Cohort[]>('/api/cohorts', { token });
+// Public endpoint (no token needed) — the registration screen shows a cohort
+// picker before the user has one; admin screens still pass a token, which is
+// harmless since the route doesn't require it either way.
+export function listCohorts(token?: string | null): Promise<Cohort[]> {
+  return request<Cohort[]>('/api/cohorts', { token: token ?? undefined });
 }
 
 export interface CreateCohortRequest {

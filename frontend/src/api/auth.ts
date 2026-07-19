@@ -9,6 +9,7 @@ export interface UserResponse {
   role: UserRole;
   studentId: string | null;
   indexNumber: string | null;
+  cohortId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +26,7 @@ export interface RegisterRequest {
   role?: UserRole;
   studentId?: string;
   indexNumber?: string;
+  cohortId?: string;
 }
 
 export interface LoginRequest {
