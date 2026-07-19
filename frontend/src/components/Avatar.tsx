@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import Text from './Text';
 import { AccentSwatch, useTheme } from '../theme';
 
@@ -25,11 +25,23 @@ interface AvatarProps {
   name: string;
   size?: number;
   color?: AccentSwatch;
+  photoUrl?: string | null;
 }
 
-export default function Avatar({ name, size = 36, color }: AvatarProps) {
+export default function Avatar({ name, size = 36, color, photoUrl }: AvatarProps) {
   const { colors } = useTheme();
   const swatch = color ?? colorForKey(name, Object.values(colors.accents));
+
+  if (photoUrl) {
+    return (
+      <Image
+        source={{ uri: photoUrl }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+        resizeMode="cover"
+      />
+    );
+  }
+
   return (
     <View
       style={[

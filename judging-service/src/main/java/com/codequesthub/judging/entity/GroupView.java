@@ -18,8 +18,12 @@ public class GroupView {
     @Column(name = "name")
     private String name;
 
+    @Column(name = "photo_path")
+    private String photoPath;
+
     public UUID getId() { return id; }
     public UUID getCohortId() { return cohortId; }
     public Integer getGroupNumber() { return groupNumber; }
     public String getName() { return name; }
+    public String getPhotoPath() { return photoPath; }
 }

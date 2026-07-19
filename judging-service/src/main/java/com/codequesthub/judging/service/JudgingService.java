@@ -212,7 +212,8 @@ public class JudgingService {
                 : weightedSums.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
                     .divide(BigDecimal.valueOf(weightedSums.size()), 2, RoundingMode.HALF_UP);
 
-            entries.add(new LeaderboardEntry(group.getId(), group.getName(), group.getGroupNumber(),
+            String photoUrl = group.getPhotoPath() == null ? null : "/api/groups/photos/" + group.getPhotoPath();
+            entries.add(new LeaderboardEntry(group.getId(), group.getName(), group.getGroupNumber(), photoUrl,
                 average, scorecards.size()));
         }
 

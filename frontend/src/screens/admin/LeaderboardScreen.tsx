@@ -3,6 +3,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '../../components/Text';
 import { getLeaderboard, LeaderboardEntry } from '../../api/judging';
+import { resolveGroupPhotoUrl } from '../../api/groups';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
@@ -60,7 +61,7 @@ export default function LeaderboardScreen() {
         return (
           <Card key={e.groupId} style={styles.card}>
             <Text style={[styles.rank, { color: rankColor }]}>#{index + 1}</Text>
-            <Avatar name={name} size={40} />
+            <Avatar name={name} size={40} photoUrl={resolveGroupPhotoUrl(e.groupPhotoUrl)} />
             <View style={styles.details}>
               <Text style={styles.cardTitle}>{name}</Text>
               <Text style={styles.cardMeta}>

@@ -9,6 +9,7 @@ import {
   createGroup,
   GroupResponse,
   listGroupsByCohort,
+  resolveGroupPhotoUrl,
   setGroupLeader,
 } from '../../api/groups';
 import { UserSearchResult } from '../../api/users';
@@ -180,9 +181,12 @@ export default function GroupsScreen() {
 
       {groups.map((g) => (
         <Card key={g.id}>
-          <Text style={styles.cardTitle}>
-            Group {g.groupNumber} {g.name ? `— ${g.name}` : ''}
-          </Text>
+          <View style={styles.groupHeader}>
+            <Avatar name={g.name ?? `Group ${g.groupNumber}`} size={32} photoUrl={resolveGroupPhotoUrl(g.photoUrl)} />
+            <Text style={styles.cardTitle}>
+              Group {g.groupNumber} {g.name ? `— ${g.name}` : ''}
+            </Text>
+          </View>
           {g.supervisorId ? (
             <Text style={styles.cardMeta}>Supervisor: {userLabel(g.supervisorId, names)}</Text>
           ) : (
@@ -256,6 +260,7 @@ export default function GroupsScreen() {
 function createStyles(colors: Colors) {
   return StyleSheet.create({
     container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    groupHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     cardTitle: { ...typography.body, fontWeight: '600' },
     cardMeta: { ...typography.caption, color: colors.textMuted },
     hint: { ...typography.caption, color: colors.textMuted },

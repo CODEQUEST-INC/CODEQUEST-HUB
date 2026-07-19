@@ -3,9 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
-import { GroupResponse, listGroupsByCohort } from '../../api/groups';
+import { GroupResponse, listGroupsByCohort, resolveGroupPhotoUrl } from '../../api/groups';
 import { getMyScorecard, JudgingCriterion, listCriteria, ScoreEntry, submitScorecard } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
+import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import ProgressBar from '../../components/ProgressBar';
@@ -121,6 +122,7 @@ export default function ScorecardScreen() {
                 style={[styles.chip, groupId === g.id && styles.chipSelected]}
                 onPress={() => setGroupId(g.id)}
               >
+                <Avatar name={g.name ?? `Group ${g.groupNumber}`} size={20} photoUrl={resolveGroupPhotoUrl(g.photoUrl)} />
                 <Text style={[styles.chipText, groupId === g.id && styles.chipTextSelected]}>
                   {g.name ?? `Group ${g.groupNumber}`}
                 </Text>
@@ -188,6 +190,9 @@ function createStyles(colors: Colors) {
     label: { ...typography.subheading, fontSize: 14, marginTop: spacing.sm },
     row: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
     chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.pill,

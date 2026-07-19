@@ -3,9 +3,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import Text from '../../components/Text';
-import { getGroupById } from '../../api/groups';
+import { getGroupById, resolveGroupPhotoUrl } from '../../api/groups';
 import { getSupervisorProposals, ProposalResponse, ProposalStatus } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
+import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
 import StatusBadge from '../../components/StatusBadge';
 import { SupervisorStackParamList } from '../../navigation/types';
@@ -16,6 +17,7 @@ type Props = NativeStackScreenProps<SupervisorStackParamList, 'ReviewQueue'>;
 interface Row {
   proposal: ProposalResponse;
   groupLabel: string;
+  groupPhotoUrl: string | null;
 }
 
 function getStatusTint(colors: Colors): Record<ProposalStatus, AccentSwatch> {
@@ -48,9 +50,13 @@ export default function ReviewQueueScreen({ navigation }: Props) {
         proposals.map(async (proposal) => {
           try {
             const group = await getGroupById(proposal.groupId, token);
-            return { proposal, groupLabel: group.name ?? `Group ${group.groupNumber}` };
+            return {
+              proposal,
+              groupLabel: group.name ?? `Group ${group.groupNumber}`,
+              groupPhotoUrl: group.photoUrl,
+            };
           } catch {
-            return { proposal, groupLabel: proposal.groupId };
+            return { proposal, groupLabel: proposal.groupId, groupPhotoUrl: null };
           }
         })
       );
@@ -98,7 +104,10 @@ export default function ReviewQueueScreen({ navigation }: Props) {
               <Text style={styles.cardTitle}>{item.proposal.title}</Text>
               <StatusBadge status={item.proposal.status} />
             </View>
-            <Text style={styles.cardMeta}>{item.groupLabel}</Text>
+            <View style={styles.groupRow}>
+              <Avatar name={item.groupLabel} size={20} photoUrl={resolveGroupPhotoUrl(item.groupPhotoUrl)} />
+              <Text style={styles.cardMeta}>{item.groupLabel}</Text>
+            </View>
           </Card>
         </Pressable>
       )}
@@ -113,6 +122,7 @@ function createStyles(colors: Colors) {
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
     cardTitle: { ...typography.body, fontWeight: '600', flexShrink: 1 },
+    groupRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
     cardMeta: { ...typography.caption, color: colors.textMuted },
     emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
     error: { color: colors.danger, textAlign: 'center' },
