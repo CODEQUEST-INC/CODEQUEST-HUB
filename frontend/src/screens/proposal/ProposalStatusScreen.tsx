@@ -5,7 +5,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '../../components/Text';
 import { ApiError } from '../../api/client';
-import { getMyProposal, ProposalResponse, ProposalStatus, resolveProposalPdfUrl } from '../../api/proposals';
+import { getMyProposal, ProposalResponse, ProposalStatus, resolveProposalPdfUrl, withdrawProposal } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import EmptyState from '../../components/EmptyState';
 import StatusBadge from '../../components/StatusBadge';
@@ -56,6 +56,8 @@ export default function ProposalStatusScreen({ navigation }: Props) {
   const [proposal, setProposal] = useState<ProposalResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -80,6 +82,26 @@ export default function ProposalStatusScreen({ navigation }: Props) {
       load();
     }, [load])
   );
+
+  const onWithdraw = async () => {
+    if (!token || !proposal) return;
+    if (!confirmingWithdraw) {
+      setConfirmingWithdraw(true);
+      setTimeout(() => setConfirmingWithdraw(false), 4000);
+      return;
+    }
+    setConfirmingWithdraw(false);
+    setError(null);
+    setWithdrawing(true);
+    try {
+      const updated = await withdrawProposal(proposal.id, token);
+      setProposal(updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to withdraw proposal');
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -111,7 +133,9 @@ export default function ProposalStatusScreen({ navigation }: Props) {
     );
   }
 
-  const canResubmit = proposal.status === 'rejected' || proposal.status === 'changes_requested';
+  const canResubmit =
+    proposal.status === 'rejected' || proposal.status === 'changes_requested' || proposal.status === 'draft';
+  const canWithdraw = proposal.status === 'submitted' || proposal.status === 'under_review';
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
@@ -156,6 +180,21 @@ export default function ProposalStatusScreen({ navigation }: Props) {
           <Text style={styles.buttonText}>Resubmit</Text>
         </Pressable>
       ) : null}
+
+      {canWithdraw ? (
+        <Pressable style={styles.dangerButton} onPress={onWithdraw} disabled={withdrawing}>
+          {withdrawing ? (
+            <ActivityIndicator color={colors.danger} />
+          ) : (
+            <>
+              <Feather name="corner-up-left" size={15} color={colors.danger} />
+              <Text style={styles.dangerButtonText}>
+                {confirmingWithdraw ? 'Tap again to confirm withdrawal' : 'Withdraw proposal'}
+              </Text>
+            </>
+          )}
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
@@ -196,5 +235,17 @@ function createStyles(colors: Colors) {
       marginTop: spacing.lg,
     },
     secondaryButtonText: { color: colors.primary, fontWeight: '600' },
+    dangerButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      borderRadius: radius.md,
+      padding: spacing.lg,
+      marginTop: spacing.lg,
+    },
+    dangerButtonText: { color: colors.danger, fontWeight: '600' },
   });
 }

@@ -118,6 +118,10 @@ export function resubmitProposal(
   return submitMultipart(`/api/proposals/${proposalId}/resubmit`, 'PATCH', req, pdf, token);
 }
 
+export function withdrawProposal(proposalId: string, token: string): Promise<ProposalResponse> {
+  return request<ProposalResponse>(`/api/proposals/${proposalId}/withdraw`, { method: 'PATCH', token });
+}
+
 export function reviewProposal(
   proposalId: string,
   req: ReviewRequest,

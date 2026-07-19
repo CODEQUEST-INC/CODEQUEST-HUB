@@ -88,10 +88,11 @@ public class ProposalService {
         }
 
         if (proposal.getStatus() != ProposalStatus.changes_requested &&
-            proposal.getStatus() != ProposalStatus.rejected) {
+            proposal.getStatus() != ProposalStatus.rejected &&
+            proposal.getStatus() != ProposalStatus.draft) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Cannot resubmit a proposal with status \"" + proposal.getStatus().name() +
-                "\". Resubmission is only allowed after rejection or a request for changes.");
+                "\". Resubmission is only allowed after withdrawing, rejection, or a request for changes.");
         }
 
         String oldPdfPath = proposal.getPdfPath();
@@ -113,6 +114,39 @@ public class ProposalService {
         if (oldPdfPath != null) {
             deleteFileQuietly(oldPdfPath);
         }
+        return proposal;
+    }
+
+    // Student: pull a proposal back before the supervisor has acted on it, so
+    // it can be edited and resubmitted like one that was rejected.
+    @Transactional
+    public Proposal withdrawProposal(UUID userId, UUID proposalId) {
+        Proposal proposal = proposalRepo.findById(proposalId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proposal not found"));
+
+        if (!memberRepo.existsByGroupIdAndUserId(proposal.getGroupId(), userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "You are not a member of this proposal's group");
+        }
+
+        if (proposal.getStatus() != ProposalStatus.submitted &&
+            proposal.getStatus() != ProposalStatus.under_review) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Cannot withdraw a proposal with status \"" + proposal.getStatus().name() +
+                "\". Only proposals awaiting review can be withdrawn.");
+        }
+
+        int newVersion = proposal.getCurrentVersion() + 1;
+        proposal.setStatus(ProposalStatus.draft);
+        proposal.setCurrentVersion(newVersion);
+        proposal = proposalRepo.save(proposal);
+
+        ProposalContentRequest snapshot = new ProposalContentRequest();
+        snapshot.setTitle(proposal.getTitle());
+        snapshot.setProblemStatement(proposal.getProblemStatement());
+        snapshot.setObjectives(proposal.getObjectives());
+        snapshot.setTechStack(proposal.getTechStack());
+        saveVersion(proposal.getId(), newVersion, snapshot, proposal.getPdfPath(), "withdrawn", userId, null);
         return proposal;
     }
 

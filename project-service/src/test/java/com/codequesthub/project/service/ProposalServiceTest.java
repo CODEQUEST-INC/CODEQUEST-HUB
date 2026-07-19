@@ -182,6 +182,81 @@ class ProposalServiceTest {
     }
 
     @Test
+    void resubmitProposal_fromDraft_succeeds() {
+        UUID userId = UUID.randomUUID();
+        UUID proposalId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        Proposal proposal = proposalWith(proposalId, groupId, ProposalStatus.draft);
+        when(proposalRepo.findById(proposalId)).thenReturn(Optional.of(proposal));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(proposalRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Proposal updated = service().resubmitProposal(userId, proposalId, contentReq(), validPdf());
+
+        assertThat(updated.getStatus()).isEqualTo(ProposalStatus.submitted);
+        assertThat(updated.getCurrentVersion()).isEqualTo(2);
+    }
+
+    @Test
+    void withdrawProposal_fromSubmitted_movesToDraftAndBumpsVersion() {
+        UUID userId = UUID.randomUUID();
+        UUID proposalId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        Proposal proposal = proposalWith(proposalId, groupId, ProposalStatus.submitted);
+        when(proposalRepo.findById(proposalId)).thenReturn(Optional.of(proposal));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(proposalRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Proposal updated = service().withdrawProposal(userId, proposalId);
+
+        assertThat(updated.getStatus()).isEqualTo(ProposalStatus.draft);
+        assertThat(updated.getCurrentVersion()).isEqualTo(2);
+    }
+
+    @Test
+    void withdrawProposal_fromUnderReview_movesToDraft() {
+        UUID userId = UUID.randomUUID();
+        UUID proposalId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        Proposal proposal = proposalWith(proposalId, groupId, ProposalStatus.under_review);
+        when(proposalRepo.findById(proposalId)).thenReturn(Optional.of(proposal));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(proposalRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Proposal updated = service().withdrawProposal(userId, proposalId);
+
+        assertThat(updated.getStatus()).isEqualTo(ProposalStatus.draft);
+    }
+
+    @Test
+    void withdrawProposal_alreadyApproved_badRequest() {
+        UUID userId = UUID.randomUUID();
+        UUID proposalId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        Proposal proposal = proposalWith(proposalId, groupId, ProposalStatus.approved);
+        when(proposalRepo.findById(proposalId)).thenReturn(Optional.of(proposal));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+
+        assertThatThrownBy(() -> service().withdrawProposal(userId, proposalId))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("Cannot withdraw");
+    }
+
+    @Test
+    void withdrawProposal_notAGroupMember_forbidden() {
+        UUID userId = UUID.randomUUID();
+        UUID proposalId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        Proposal proposal = proposalWith(proposalId, groupId, ProposalStatus.submitted);
+        when(proposalRepo.findById(proposalId)).thenReturn(Optional.of(proposal));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service().withdrawProposal(userId, proposalId))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("not a member");
+    }
+
+    @Test
     void reviewProposal_wrongSupervisor_forbidden() {
         UUID actingSupervisor = UUID.randomUUID();
         UUID assignedSupervisor = UUID.randomUUID();

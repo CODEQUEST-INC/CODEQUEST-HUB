@@ -72,6 +72,16 @@ public class ProposalController {
         return ResponseEntity.ok(Map.of("data", p));
     }
 
+    // Student: pull back a proposal that's still awaiting review, so it can
+    // be edited and resubmitted before the supervisor has acted on it.
+    @PatchMapping("/{proposalId}/withdraw")
+    @PreAuthorize("hasRole('student')")
+    public ResponseEntity<?> withdraw(@PathVariable UUID proposalId, Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        Proposal p = proposalService.withdrawProposal(userId, proposalId);
+        return ResponseEntity.ok(Map.of("data", p));
+    }
+
     // Supervisor: approve / reject / request changes
     @PatchMapping("/{proposalId}/review")
     @PreAuthorize("hasRole('supervisor')")
