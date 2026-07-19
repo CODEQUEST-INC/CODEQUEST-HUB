@@ -2,6 +2,11 @@ import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config';
 import { ApiError, request } from './client';
 
+export interface ShowcasePhoto {
+  id: string;
+  url: string;
+}
+
 export interface ShowcaseEntryResponse {
   id: string;
   groupId: string;
@@ -11,7 +16,7 @@ export interface ShowcaseEntryResponse {
   title: string;
   description: string;
   githubUrl: string;
-  photoUrl: string | null;
+  photos: ShowcasePhoto[];
   createdAt: string;
   updatedAt: string;
 }
@@ -42,7 +47,7 @@ export function upsertShowcaseEntry(
 // Multipart upload can't go through client.ts's request() — it always
 // JSON-stringifies and sets Content-Type: application/json. FormData needs
 // no manual Content-Type (RN/the browser set the multipart boundary itself).
-export async function uploadShowcasePhoto(
+export async function addShowcasePhoto(
   groupId: string,
   file: { uri: string; name: string; type: string },
   token: string
@@ -71,6 +76,10 @@ export async function uploadShowcasePhoto(
     throw new ApiError(res.status, message);
   }
   return json?.data as ShowcaseEntryResponse;
+}
+
+export function deleteShowcasePhoto(groupId: string, photoId: string, token: string): Promise<ShowcaseEntryResponse> {
+  return request<ShowcaseEntryResponse>(`/api/showcase/${groupId}/photo/${photoId}`, { method: 'DELETE', token });
 }
 
 export function deleteShowcaseEntry(groupId: string, token: string): Promise<void> {

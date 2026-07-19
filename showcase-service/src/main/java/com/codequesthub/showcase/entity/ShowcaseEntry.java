@@ -27,9 +27,6 @@ public class ShowcaseEntry {
     @Column(name = "github_url", nullable = false, length = 500)
     private String githubUrl;
 
-    @Column(name = "photo_path", length = 255)
-    private String photoPath;
-
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
 
@@ -56,8 +53,6 @@ public class ShowcaseEntry {
     public void setDescription(String v) { this.description = v; }
     public String getGithubUrl() { return githubUrl; }
     public void setGithubUrl(String v) { this.githubUrl = v; }
-    public String getPhotoPath() { return photoPath; }
-    public void setPhotoPath(String v) { this.photoPath = v; }
     public UUID getCreatedBy() { return createdBy; }
     public void setCreatedBy(UUID v) { this.createdBy = v; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

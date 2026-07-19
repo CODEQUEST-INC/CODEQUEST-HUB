@@ -114,7 +114,7 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
         data={visibleEntries}
         keyExtractor={(e) => e.id}
         renderItem={({ item }) => {
-          const photo = resolvePhotoUrl(item.photoUrl);
+          const photo = resolvePhotoUrl(item.photos[0]?.url ?? null);
           const cohortName = cohortNameById[item.cohortId];
           return (
             <Pressable onPress={() => navigation.navigate('ShowcaseDetail', { entry: item })}>

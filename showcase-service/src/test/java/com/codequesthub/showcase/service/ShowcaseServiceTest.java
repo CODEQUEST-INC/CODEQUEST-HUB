@@ -5,22 +5,28 @@ import com.codequesthub.showcase.entity.GroupView;
 import com.codequesthub.showcase.entity.ProposalStatus;
 import com.codequesthub.showcase.entity.ProposalView;
 import com.codequesthub.showcase.entity.ShowcaseEntry;
+import com.codequesthub.showcase.entity.ShowcasePhoto;
 import com.codequesthub.showcase.repository.GroupMemberRepository;
 import com.codequesthub.showcase.repository.GroupViewRepository;
 import com.codequesthub.showcase.repository.ProposalViewRepository;
 import com.codequesthub.showcase.repository.ShowcaseEntryRepository;
+import com.codequesthub.showcase.repository.ShowcasePhotoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +34,7 @@ import static org.mockito.Mockito.when;
 class ShowcaseServiceTest {
 
     @Mock private ShowcaseEntryRepository entryRepo;
+    @Mock private ShowcasePhotoRepository photoRepo;
     @Mock private GroupViewRepository groupViewRepo;
     @Mock private GroupMemberRepository memberRepo;
     @Mock private ProposalViewRepository proposalViewRepo;
@@ -36,7 +43,7 @@ class ShowcaseServiceTest {
     Path uploadDir;
 
     private ShowcaseService service() {
-        return new ShowcaseService(entryRepo, groupViewRepo, memberRepo, proposalViewRepo, uploadDir.toString());
+        return new ShowcaseService(entryRepo, photoRepo, groupViewRepo, memberRepo, proposalViewRepo, uploadDir.toString());
     }
 
     private ProposalView proposalWith(UUID groupId, ProposalStatus status) {
@@ -52,6 +59,16 @@ class ShowcaseServiceTest {
         req.setDescription("A description");
         req.setGithubUrl("https://github.com/example/repo");
         return req;
+    }
+
+    private GroupView approvedGroupSetup(UUID groupId, UUID userId) {
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        GroupView group = new GroupView();
+        ReflectionTestUtils.setField(group, "id", groupId);
+        when(groupViewRepo.findById(groupId)).thenReturn(Optional.of(group));
+        when(proposalViewRepo.findByGroupId(groupId))
+            .thenReturn(Optional.of(proposalWith(groupId, ProposalStatus.approved)));
+        return group;
     }
 
     @Test
@@ -131,5 +148,85 @@ class ShowcaseServiceTest {
         when(entryRepo.findByGroupId(groupId)).thenReturn(Optional.of(entry));
 
         service().deleteEntry(groupId, adminId, "admin");
+    }
+
+    @Test
+    void addPhoto_atCap_badRequest() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        approvedGroupSetup(groupId, userId);
+        UUID entryId = UUID.randomUUID();
+        ShowcaseEntry entry = new ShowcaseEntry();
+        ReflectionTestUtils.setField(entry, "id", entryId);
+        entry.setGroupId(groupId);
+        when(entryRepo.findByGroupId(groupId)).thenReturn(Optional.of(entry));
+        when(photoRepo.countByEntryId(entryId)).thenReturn(5L);
+
+        MultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[] { 1, 2, 3 });
+
+        assertThatThrownBy(() -> service().addPhoto(groupId, userId, file))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("Maximum 5 photos");
+    }
+
+    @Test
+    void addPhoto_underCapWithValidImage_succeeds() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        approvedGroupSetup(groupId, userId);
+        UUID entryId = UUID.randomUUID();
+        ShowcaseEntry entry = new ShowcaseEntry();
+        ReflectionTestUtils.setField(entry, "id", entryId);
+        entry.setGroupId(groupId);
+        when(entryRepo.findByGroupId(groupId)).thenReturn(Optional.of(entry));
+        when(photoRepo.countByEntryId(entryId)).thenReturn(2L);
+        when(photoRepo.findByEntryIdOrderByPositionAsc(entryId)).thenReturn(List.of(new ShowcasePhoto()));
+
+        MultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[] { 1, 2, 3 });
+
+        var result = service().addPhoto(groupId, userId, file);
+
+        assertThat(result.getPhotos()).hasSize(1);
+    }
+
+    @Test
+    void addPhoto_unsupportedContentType_badRequest() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        approvedGroupSetup(groupId, userId);
+        UUID entryId = UUID.randomUUID();
+        ShowcaseEntry entry = new ShowcaseEntry();
+        ReflectionTestUtils.setField(entry, "id", entryId);
+        entry.setGroupId(groupId);
+        when(entryRepo.findByGroupId(groupId)).thenReturn(Optional.of(entry));
+        when(photoRepo.countByEntryId(entryId)).thenReturn(0L);
+
+        MultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", new byte[] { 1 });
+
+        assertThatThrownBy(() -> service().addPhoto(groupId, userId, file))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("Unsupported image type");
+    }
+
+    @Test
+    void deletePhoto_photoBelongsToDifferentEntry_notFound() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        approvedGroupSetup(groupId, userId);
+        UUID entryId = UUID.randomUUID();
+        ShowcaseEntry entry = new ShowcaseEntry();
+        ReflectionTestUtils.setField(entry, "id", entryId);
+        entry.setGroupId(groupId);
+        when(entryRepo.findByGroupId(groupId)).thenReturn(Optional.of(entry));
+
+        UUID photoId = UUID.randomUUID();
+        ShowcasePhoto photo = new ShowcasePhoto();
+        ReflectionTestUtils.setField(photo, "id", photoId);
+        photo.setEntryId(UUID.randomUUID()); // different entry
+        when(photoRepo.findById(photoId)).thenReturn(Optional.of(photo));
+
+        assertThatThrownBy(() -> service().deletePhoto(groupId, userId, photoId))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("not found");
     }
 }
