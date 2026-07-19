@@ -15,6 +15,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -72,6 +73,13 @@ public class GatewayController {
 
         String query = request.getQueryString();
         String targetUrl = route.baseUrl() + path + (query != null ? "?" + query : "");
+        // request.getQueryString() is already percent-encoded (e.g. "q=QA%20Student").
+        // RestTemplate.exchange(String, ...) treats a plain String as a URI *template*
+        // and re-encodes it, mangling anything already escaped (spaces silently turn
+        // into something that matches nothing downstream, with no error at all).
+        // URI.create() parses the string as an already-fully-encoded URI verbatim, and
+        // the URI-typed exchange() overload skips template encoding entirely.
+        URI targetUri = URI.create(targetUrl);
 
         HttpHeaders headers = new HttpHeaders();
         Collections.list(request.getHeaderNames()).forEach(name -> {
@@ -91,7 +99,7 @@ public class GatewayController {
 
         ResponseEntity<byte[]> response;
         try {
-            response = restTemplate.exchange(targetUrl, HttpMethod.valueOf(request.getMethod()), entity, byte[].class);
+            response = restTemplate.exchange(targetUri, HttpMethod.valueOf(request.getMethod()), entity, byte[].class);
         } catch (ResourceAccessException e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
