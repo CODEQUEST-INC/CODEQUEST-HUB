@@ -33,3 +33,9 @@ export function createCohort(req: CreateCohortRequest, token: string): Promise<C
 export function updateCohort(cohortId: string, req: UpdateCohortRequest, token: string): Promise<Cohort> {
   return request<Cohort>(`/api/cohorts/${cohortId}`, { method: 'PATCH', body: req, token });
 }
+
+// Blocked (not cascaded) server-side if the cohort still has groups, students,
+// judging criteria, or judges — the error message names exactly what's in the way.
+export function deleteCohort(cohortId: string, token: string): Promise<void> {
+  return request<void>(`/api/cohorts/${cohortId}`, { method: 'DELETE', token });
+}

@@ -10,4 +10,5 @@ public interface GroupRepository extends JpaRepository<Group, UUID> {
     boolean existsByCohortIdAndGroupNumber(UUID cohortId, Integer groupNumber);
     Optional<Group> findByCohortIdAndGroupNumber(UUID cohortId, Integer groupNumber);
     List<Group> findByCohortId(UUID cohortId);
+    boolean existsByCohortId(UUID cohortId);
 }
