@@ -1,15 +1,21 @@
 package com.codequesthub.common.web;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
@@ -60,6 +66,35 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult().getFieldErrors().stream()
             .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
             .collect(Collectors.joining("; "));
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message, request.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    // Jackson rejects the request body before it ever reaches a controller/validation
+    // (e.g. a "dueDate" field that isn't valid ISO-8601) — by default this comes back as a
+    // bare 400 with no message at all, which read to users as an unexplained "Bad Request".
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        String message = "Request body is malformed";
+        Throwable cause = ex.getCause();
+        if (cause instanceof InvalidFormatException ife) {
+            String field = ife.getPath().isEmpty()
+                ? "value"
+                : ife.getPath().get(ife.getPath().size() - 1).getFieldName();
+            Class<?> targetType = ife.getTargetType();
+            if (targetType == LocalDate.class) {
+                message = field + ": \"" + ife.getValue() + "\" is not a valid date — use YYYY-MM-DD (e.g. 2026-07-19)";
+            } else if (targetType == LocalDateTime.class) {
+                message = field + ": \"" + ife.getValue() + "\" is not a valid date/time — use YYYY-MM-DDTHH:mm:ss";
+            } else if (targetType != null && targetType.isEnum()) {
+                message = field + ": \"" + ife.getValue() + "\" is not valid — must be one of "
+                    + Arrays.toString(targetType.getEnumConstants());
+            } else {
+                message = field + ": \"" + ife.getValue() + "\" is not a valid value";
+            }
+        } else if (cause instanceof DateTimeParseException dtpe) {
+            message = "\"" + dtpe.getParsedString() + "\" is not a valid date — use YYYY-MM-DD (e.g. 2026-07-19)";
+        }
         ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message, request.getRequestURI());
         return ResponseEntity.badRequest().body(body);
     }
