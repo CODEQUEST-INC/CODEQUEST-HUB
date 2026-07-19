@@ -34,6 +34,12 @@ public class GatewayController {
     private final RestTemplate restTemplate;
     private final List<Route> routes;
 
+    // Mirrors each downstream service's own spring.servlet.multipart.max-request-size —
+    // duplicated here deliberately (see the size check below for why).
+    private static final long GROUP_MAX_BYTES = 5L * 1024 * 1024;
+    private static final long PROJECT_MAX_BYTES = 15L * 1024 * 1024;
+    private static final long SHOWCASE_MAX_BYTES = 5L * 1024 * 1024;
+
     public GatewayController(RestTemplate restTemplate,
                               @Value("${auth.service.url}") String authServiceUrl,
                               @Value("${group.service.url}") String groupServiceUrl,
@@ -43,13 +49,13 @@ public class GatewayController {
                               @Value("${showcase.service.url}") String showcaseServiceUrl) {
         this.restTemplate = restTemplate;
         this.routes = List.of(
-                new Route("/api/auth", authServiceUrl),
-                new Route("/api/groups", groupServiceUrl),
-                new Route("/api/cohorts", groupServiceUrl),
-                new Route("/api/proposals", projectServiceUrl),
-                new Route("/api/tasks", taskServiceUrl),
-                new Route("/api/judging", judgingServiceUrl),
-                new Route("/api/showcase", showcaseServiceUrl)
+                new Route("/api/auth", authServiceUrl, null),
+                new Route("/api/groups", groupServiceUrl, GROUP_MAX_BYTES),
+                new Route("/api/cohorts", groupServiceUrl, null),
+                new Route("/api/proposals", projectServiceUrl, PROJECT_MAX_BYTES),
+                new Route("/api/tasks", taskServiceUrl, null),
+                new Route("/api/judging", judgingServiceUrl, null),
+                new Route("/api/showcase", showcaseServiceUrl, SHOWCASE_MAX_BYTES)
         );
     }
 
@@ -95,6 +101,22 @@ public class GatewayController {
         }
 
         byte[] body = request.getInputStream().readAllBytes();
+
+        // Reject an oversized body here rather than proxying it: sending a large body
+        // through RestTemplate's JDK HttpClient to a downstream service that rejects it
+        // early (before the body finishes sending) makes the client abort the write with
+        // an IOException — surfacing as a bare 503 with no message, since by then the
+        // downstream's own friendly 413 response was never received. Checking the limit
+        // up front lets the gateway return that same friendly shape itself instead.
+        if (route.maxBodyBytes() != null && body.length > route.maxBodyBytes()) {
+            String message = "File is too large — the limit is " + (route.maxBodyBytes() / (1024 * 1024)) + "MB";
+            String json = "{\"status\":413,\"error\":\"Payload Too Large\",\"message\":\"" + message
+                + "\",\"path\":\"" + path + "\"}";
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+
         HttpEntity<byte[]> entity = new HttpEntity<>(body.length > 0 ? body : null, headers);
 
         ResponseEntity<byte[]> response;
@@ -114,6 +136,6 @@ public class GatewayController {
         return new ResponseEntity<>(response.getBody(), responseHeaders, response.getStatusCode());
     }
 
-    private record Route(String prefix, String baseUrl) {
+    private record Route(String prefix, String baseUrl, Long maxBodyBytes) {
     }
 }
