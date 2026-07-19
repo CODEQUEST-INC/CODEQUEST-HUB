@@ -10,6 +10,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -97,5 +98,18 @@ public class GlobalExceptionHandler {
         }
         ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message, request.getRequestURI());
         return ResponseEntity.badRequest().body(body);
+    }
+
+    // An uploaded file exceeded spring.servlet.multipart.max-file-size —
+    // otherwise surfaces as a bare 413 with no explanation of the actual limit.
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        String message = "File is too large";
+        long maxSize = ex.getMaxUploadSize();
+        if (maxSize > 0) {
+            message += " — the limit is " + (maxSize / (1024 * 1024)) + "MB";
+        }
+        ApiError body = new ApiError(HttpStatus.PAYLOAD_TOO_LARGE.value(), HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase(), message, request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
     }
 }

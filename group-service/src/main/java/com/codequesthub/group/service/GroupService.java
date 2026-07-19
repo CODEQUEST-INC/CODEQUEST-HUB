@@ -3,21 +3,41 @@ package com.codequesthub.group.service;
 import com.codequesthub.group.dto.*;
 import com.codequesthub.group.entity.*;
 import com.codequesthub.group.repository.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 @Service
 public class GroupService {
 
+    private static final Map<String, String> ALLOWED_CONTENT_TYPES = Map.of(
+        "image/jpeg", ".jpg",
+        "image/png", ".png",
+        "image/webp", ".webp"
+    );
+
     private final GroupRepository groupRepo;
     private final GroupMemberRepository memberRepo;
+    private final Path uploadDir;
 
-    public GroupService(GroupRepository groupRepo, GroupMemberRepository memberRepo) {
+    public GroupService(GroupRepository groupRepo, GroupMemberRepository memberRepo,
+                         @Value("${group.upload-dir}") String uploadDir) {
         this.groupRepo = groupRepo;
         this.memberRepo = memberRepo;
+        this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+        try {
+            Files.createDirectories(this.uploadDir);
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not create group upload directory: " + uploadDir, e);
+        }
     }
 
     public Group setGroupLeader(UUID groupId, UUID actingUserId, String actingRole, SetGroupLeaderRequest req) {
@@ -92,6 +112,63 @@ public class GroupService {
             .toList();
     }
 
+    // Any member of the group can set/replace its photo — no leader/supervisor
+    // gate, matching the "keep it simple" call on this one.
+    public Map<String, Object> uploadPhoto(UUID groupId, UUID userId, MultipartFile file) {
+        Group group = groupRepo.findById(groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        if (!memberRepo.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group");
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No file uploaded");
+        }
+        String extension = ALLOWED_CONTENT_TYPES.get(file.getContentType());
+        if (extension == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Unsupported image type. Allowed: jpeg, png, webp");
+        }
+
+        String oldPhotoPath = group.getPhotoPath();
+        String filename = UUID.randomUUID() + extension;
+        try {
+            Files.write(uploadDir.resolve(filename), file.getBytes());
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save photo");
+        }
+
+        group.setPhotoPath(filename);
+        Group saved = groupRepo.save(group);
+
+        if (oldPhotoPath != null) {
+            deleteFileQuietly(oldPhotoPath);
+        }
+
+        return buildGroupResponse(saved, memberRepo.findByGroupId(groupId));
+    }
+
+    public byte[] readPhoto(String filename) {
+        Path path = uploadDir.resolve(filename).normalize();
+        if (!path.startsWith(uploadDir) || !Files.exists(path)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found");
+        }
+        try {
+            return Files.readAllBytes(path);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not read photo");
+        }
+    }
+
+    private void deleteFileQuietly(String filename) {
+        try {
+            Files.deleteIfExists(uploadDir.resolve(filename));
+        } catch (IOException ignored) {
+            // best-effort cleanup only
+        }
+    }
+
     private Map<String, Object> buildGroupResponse(Group group, List<GroupMember> members) {
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("id", group.getId());
@@ -100,6 +177,7 @@ public class GroupService {
         resp.put("name", group.getName());
         resp.put("supervisorId", group.getSupervisorId());
         resp.put("groupLeaderId", group.getGroupLeaderId());
+        resp.put("photoUrl", group.getPhotoPath() == null ? null : "/api/groups/photos/" + group.getPhotoPath());
         resp.put("createdAt", group.getCreatedAt());
         resp.put("members", members);
         return resp;

@@ -31,7 +31,10 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/groups/health", "/error").permitAll()
+                // Photo bytes are served publicly (like showcase photos) since
+                // React Native's <Image> can't attach an Authorization header to
+                // its own request — everything else about a group stays private.
+                .requestMatchers("/api/groups/health", "/api/groups/photos/**", "/error").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

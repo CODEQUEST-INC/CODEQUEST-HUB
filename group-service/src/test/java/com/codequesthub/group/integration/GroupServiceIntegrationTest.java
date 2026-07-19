@@ -98,6 +98,7 @@ class GroupServiceIntegrationTest {
             "06_init_judging.sql",
             "07_init_showcase.sql",
             "08_add_criterion_active_flag.sql",
+            "09_add_group_photo.sql",
         };
         Path initDir = Path.of("../database/init");
         try (Connection conn = DriverManager.getConnection(

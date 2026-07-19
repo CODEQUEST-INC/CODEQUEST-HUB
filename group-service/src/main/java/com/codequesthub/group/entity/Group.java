@@ -27,6 +27,9 @@ public class Group {
     @Column(name = "group_leader_id")
     private UUID groupLeaderId;
 
+    @Column(name = "photo_path", length = 255)
+    private String photoPath;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -44,5 +47,7 @@ public class Group {
     public void setSupervisorId(UUID v) { this.supervisorId = v; }
     public UUID getGroupLeaderId() { return groupLeaderId; }
     public void setGroupLeaderId(UUID v) { this.groupLeaderId = v; }
+    public String getPhotoPath() { return photoPath; }
+    public void setPhotoPath(String v) { this.photoPath = v; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
 }
