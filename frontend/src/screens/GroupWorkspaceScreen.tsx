@@ -46,6 +46,7 @@ export default function GroupWorkspaceScreen() {
   const [payingLoading, setPayingLoading] = useState(false);
   const [verifyingLoading, setVerifyingLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [membersExpanded, setMembersExpanded] = useState(false);
 
   const refreshPaymentInfo = useCallback(
     async (g: GroupResponse) => {
@@ -269,12 +270,15 @@ export default function GroupWorkspaceScreen() {
           style={styles.paymentCard}
           tint={paymentSummary.allPaid ? colors.accents.green : colors.accents.amber}
         >
-          <View style={styles.paymentHeaderRow}>
+          <Pressable style={styles.paymentHeaderRow} onPress={() => setMembersExpanded((prev) => !prev)}>
             <Text style={styles.cardTitle}>Group payment status</Text>
-            <Text style={styles.cardMeta}>
-              {paymentSummary.paidCount} of {paymentSummary.totalMembers} paid
-            </Text>
-          </View>
+            <View style={styles.memberPaymentRight}>
+              <Text style={styles.cardMeta}>
+                {paymentSummary.paidCount} of {paymentSummary.totalMembers} paid
+              </Text>
+              <Feather name={membersExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+            </View>
+          </Pressable>
           {paymentSummary.allPaid ? (
             <View style={styles.allPaidBanner}>
               <Feather name="check-circle" size={16} color={colors.accents.green.fg} />
@@ -283,18 +287,20 @@ export default function GroupWorkspaceScreen() {
               </Text>
             </View>
           ) : null}
-          {paymentSummary.members.map((m) => (
-            <View key={m.userId} style={styles.memberPaymentRow}>
-              <Text style={styles.memberPaymentName}>
-                {userLabel(m.userId, names)}
-                {m.userId === user?.id ? ' (you)' : ''}
-              </Text>
-              <View style={styles.memberPaymentRight}>
-                {m.shirtSize ? <Text style={styles.memberPaymentShirt}>{m.shirtSize}</Text> : null}
-                <PaidBadge status={m.status} />
-              </View>
-            </View>
-          ))}
+          {membersExpanded
+            ? paymentSummary.members.map((m) => (
+                <View key={m.userId} style={styles.memberPaymentRow}>
+                  <Text style={styles.memberPaymentName}>
+                    {userLabel(m.userId, names)}
+                    {m.userId === user?.id ? ' (you)' : ''}
+                  </Text>
+                  <View style={styles.memberPaymentRight}>
+                    {m.shirtSize ? <Text style={styles.memberPaymentShirt}>{m.shirtSize}</Text> : null}
+                    <PaidBadge status={m.status} />
+                  </View>
+                </View>
+              ))
+            : null}
         </Card>
       ) : null}
 
