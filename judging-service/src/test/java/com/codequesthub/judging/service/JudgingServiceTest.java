@@ -1,6 +1,8 @@
 package com.codequesthub.judging.service;
 
 import com.codequesthub.judging.dto.CreateCriterionRequest;
+import com.codequesthub.judging.dto.ScoreEntry;
+import com.codequesthub.judging.dto.SubmitScorecardRequest;
 import com.codequesthub.judging.dto.UpdateCriterionRequest;
 import com.codequesthub.judging.entity.GroupView;
 import com.codequesthub.judging.entity.JudgingCriterion;
@@ -185,11 +187,109 @@ class JudgingServiceTest {
         assertThat(withoutPhoto.getGroupPhotoUrl()).isNull();
     }
 
+    @Test
+    void submitScorecard_admin_allowedWithoutExplicitJudgeAssignment() {
+        UUID groupId = UUID.randomUUID();
+        UUID cohortId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        UUID criterionId = UUID.randomUUID();
+        when(groupViewRepo.findById(groupId)).thenReturn(java.util.Optional.of(groupViewWith(groupId, "Group", 1, cohortId)));
+        when(criteriaRepo.findByCohortIdAndActiveTrue(cohortId))
+            .thenReturn(List.of(criterionWith(criterionId, cohortId, new BigDecimal("100"), true)));
+        when(scorecardRepo.findByGroupIdAndJudgeId(groupId, adminId)).thenReturn(java.util.Optional.empty());
+        when(scorecardRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubmitScorecardRequest req = new SubmitScorecardRequest();
+        req.setGroupId(groupId);
+        ScoreEntry entry = new ScoreEntry();
+        entry.setCriterionId(criterionId);
+        entry.setScore(9);
+        req.setScores(List.of(entry));
+
+        Scorecard result = service().submitScorecard(adminId, "admin", req);
+
+        assertThat(result.getGroupId()).isEqualTo(groupId);
+        // Never checked the judges table — admin's privilege comes from role alone.
+        org.mockito.Mockito.verifyNoInteractions(judgeRepo);
+    }
+
+    @Test
+    void submitScorecard_supervisor_allowedWithoutExplicitJudgeAssignment() {
+        UUID groupId = UUID.randomUUID();
+        UUID cohortId = UUID.randomUUID();
+        UUID supervisorId = UUID.randomUUID();
+        UUID criterionId = UUID.randomUUID();
+        when(groupViewRepo.findById(groupId)).thenReturn(java.util.Optional.of(groupViewWith(groupId, "Group", 1, cohortId)));
+        when(criteriaRepo.findByCohortIdAndActiveTrue(cohortId))
+            .thenReturn(List.of(criterionWith(criterionId, cohortId, new BigDecimal("100"), true)));
+        when(scorecardRepo.findByGroupIdAndJudgeId(groupId, supervisorId)).thenReturn(java.util.Optional.empty());
+        when(scorecardRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubmitScorecardRequest req = new SubmitScorecardRequest();
+        req.setGroupId(groupId);
+        ScoreEntry entry = new ScoreEntry();
+        entry.setCriterionId(criterionId);
+        entry.setScore(7);
+        req.setScores(List.of(entry));
+
+        Scorecard result = service().submitScorecard(supervisorId, "supervisor", req);
+
+        assertThat(result.getGroupId()).isEqualTo(groupId);
+    }
+
+    @Test
+    void submitScorecard_studentNotAssignedAsJudge_forbidden() {
+        UUID groupId = UUID.randomUUID();
+        UUID cohortId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        when(groupViewRepo.findById(groupId)).thenReturn(java.util.Optional.of(groupViewWith(groupId, "Group", 1, cohortId)));
+        when(judgeRepo.existsByCohortIdAndUserId(cohortId, studentId)).thenReturn(false);
+
+        SubmitScorecardRequest req = new SubmitScorecardRequest();
+        req.setGroupId(groupId);
+        req.setScores(List.of());
+
+        assertThatThrownBy(() -> service().submitScorecard(studentId, "student", req))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("not an assigned judge");
+    }
+
+    @Test
+    void submitScorecard_explicitlyAssignedJudge_allowedRegardlessOfRole() {
+        UUID groupId = UUID.randomUUID();
+        UUID cohortId = UUID.randomUUID();
+        UUID judgeUserId = UUID.randomUUID();
+        UUID criterionId = UUID.randomUUID();
+        when(groupViewRepo.findById(groupId)).thenReturn(java.util.Optional.of(groupViewWith(groupId, "Group", 1, cohortId)));
+        when(judgeRepo.existsByCohortIdAndUserId(cohortId, judgeUserId)).thenReturn(true);
+        when(criteriaRepo.findByCohortIdAndActiveTrue(cohortId))
+            .thenReturn(List.of(criterionWith(criterionId, cohortId, new BigDecimal("100"), true)));
+        when(scorecardRepo.findByGroupIdAndJudgeId(groupId, judgeUserId)).thenReturn(java.util.Optional.empty());
+        when(scorecardRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubmitScorecardRequest req = new SubmitScorecardRequest();
+        req.setGroupId(groupId);
+        ScoreEntry entry = new ScoreEntry();
+        entry.setCriterionId(criterionId);
+        entry.setScore(8);
+        req.setScores(List.of(entry));
+
+        Scorecard result = service().submitScorecard(judgeUserId, "student", req);
+
+        assertThat(result.getGroupId()).isEqualTo(groupId);
+    }
+
     private GroupView groupViewWith(UUID id, String name, int number) {
         GroupView g = new GroupView();
         ReflectionTestUtils.setField(g, "id", id);
         ReflectionTestUtils.setField(g, "name", name);
         ReflectionTestUtils.setField(g, "groupNumber", number);
+        return g;
+    }
+
+    private GroupView groupViewWith(UUID id, String name, int number, UUID cohortId) {
+        GroupView g = groupViewWith(id, name, number);
+        ReflectionTestUtils.setField(g, "cohortId", cohortId);
         return g;
     }
 }
