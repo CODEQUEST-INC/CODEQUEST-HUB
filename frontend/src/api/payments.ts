@@ -24,12 +24,23 @@ export interface PaymentRecord {
   updatedAt: string;
 }
 
-export interface GroupPaymentStatus {
+export interface MemberPaymentStatus {
+  userId: string;
+  status: PaymentStatus | 'unpaid';
+  shirtSize: string | null;
+}
+
+export interface GroupPaymentSummary {
   groupId: string;
+  totalMembers: number;
+  paidCount: number;
+  allPaid: boolean;
+  members: MemberPaymentStatus[];
+}
+
+export interface CohortGroupPaymentSummary extends GroupPaymentSummary {
   groupNumber: number;
   groupName: string | null;
-  status: PaymentStatus | 'unpaid';
-  amountPesewas: number | null;
 }
 
 export interface InitializePaymentResult {
@@ -49,8 +60,8 @@ export function setFeeConfig(cohortId: string, amountPesewas: number, token: str
   });
 }
 
-export function getCohortPaymentStatuses(cohortId: string, token: string): Promise<GroupPaymentStatus[]> {
-  return request<GroupPaymentStatus[]>(`/api/payments/cohort/${cohortId}`, { token });
+export function getCohortPaymentStatuses(cohortId: string, token: string): Promise<CohortGroupPaymentSummary[]> {
+  return request<CohortGroupPaymentSummary[]>(`/api/payments/cohort/${cohortId}`, { token });
 }
 
 export function initializePayment(
@@ -69,6 +80,10 @@ export function verifyPayment(reference: string, token: string): Promise<Payment
   return request<PaymentRecord>(`/api/payments/verify/${reference}`, { token });
 }
 
-export function getGroupPaymentStatus(groupId: string, token: string): Promise<PaymentRecord | null> {
-  return request<PaymentRecord | null>(`/api/payments/group/${groupId}`, { token });
+export function getMyPaymentStatus(groupId: string, token: string): Promise<PaymentRecord | null> {
+  return request<PaymentRecord | null>(`/api/payments/mine/${groupId}`, { token });
+}
+
+export function getGroupPaymentSummary(groupId: string, token: string): Promise<GroupPaymentSummary> {
+  return request<GroupPaymentSummary>(`/api/payments/group/${groupId}/summary`, { token });
 }

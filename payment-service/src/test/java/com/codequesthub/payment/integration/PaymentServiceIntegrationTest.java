@@ -116,6 +116,65 @@ class PaymentServiceIntegrationTest {
         assertThat(verifyData.get("status")).isEqualTo("success");
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void groupSummary_reflectsAllPaidOnlyOnceEveryMemberHasPaid() {
+        UUID cohortId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        UUID user1 = UUID.randomUUID();
+        UUID user2 = UUID.randomUUID();
+
+        jdbcTemplate.update(
+            "INSERT INTO cohorts (id, name, year) VALUES (?, ?, ?)", cohortId, "IT Summary Cohort", 2026);
+        jdbcTemplate.update(
+            "INSERT INTO users (id, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, 'student')",
+            user1, "IT Student One", "it-student1-" + user1 + "@example.test", "irrelevant-hash");
+        jdbcTemplate.update(
+            "INSERT INTO users (id, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, 'student')",
+            user2, "IT Student Two", "it-student2-" + user2 + "@example.test", "irrelevant-hash");
+        jdbcTemplate.update(
+            "INSERT INTO groups (id, cohort_id, group_number, name) VALUES (?, ?, ?, ?)",
+            groupId, cohortId, 9011, "IT Summary Group");
+        jdbcTemplate.update("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", groupId, user1);
+        jdbcTemplate.update("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", groupId, user2);
+        jdbcTemplate.update(
+            "INSERT INTO payment_fee_configs (id, cohort_id, amount_pesewas) VALUES (?, ?, ?)",
+            UUID.randomUUID(), cohortId, 5000);
+
+        String token1 = jwtUtil.generateToken(user1.toString(), "it-student1@example.test", "student");
+        HttpHeaders headers1 = new HttpHeaders();
+        headers1.setBearerAuth(token1);
+        headers1.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, String> initBody = Map.of("groupId", groupId.toString(), "shirtSize", "M");
+        ResponseEntity<Map> initResponse = restTemplate.exchange(
+            "/api/payments/initialize", HttpMethod.POST, new HttpEntity<>(initBody, headers1), Map.class);
+        String reference = (String) ((Map<String, Object>) initResponse.getBody().get("data")).get("reference");
+        restTemplate.exchange("/api/payments/verify/" + reference, HttpMethod.GET, new HttpEntity<>(headers1), Map.class);
+
+        ResponseEntity<Map> summaryAfterOne = restTemplate.exchange(
+            "/api/payments/group/" + groupId + "/summary", HttpMethod.GET, new HttpEntity<>(headers1), Map.class);
+        Map<String, Object> dataAfterOne = (Map<String, Object>) summaryAfterOne.getBody().get("data");
+        assertThat(dataAfterOne.get("allPaid")).isEqualTo(false);
+        assertThat(dataAfterOne.get("paidCount")).isEqualTo(1);
+
+        String token2 = jwtUtil.generateToken(user2.toString(), "it-student2@example.test", "student");
+        HttpHeaders headers2 = new HttpHeaders();
+        headers2.setBearerAuth(token2);
+        headers2.setContentType(MediaType.APPLICATION_JSON);
+
+        ResponseEntity<Map> initResponse2 = restTemplate.exchange(
+            "/api/payments/initialize", HttpMethod.POST, new HttpEntity<>(initBody, headers2), Map.class);
+        String reference2 = (String) ((Map<String, Object>) initResponse2.getBody().get("data")).get("reference");
+        restTemplate.exchange("/api/payments/verify/" + reference2, HttpMethod.GET, new HttpEntity<>(headers2), Map.class);
+
+        ResponseEntity<Map> summaryAfterBoth = restTemplate.exchange(
+            "/api/payments/group/" + groupId + "/summary", HttpMethod.GET, new HttpEntity<>(headers1), Map.class);
+        Map<String, Object> dataAfterBoth = (Map<String, Object>) summaryAfterBoth.getBody().get("data");
+        assertThat(dataAfterBoth.get("allPaid")).isEqualTo(true);
+        assertThat(dataAfterBoth.get("paidCount")).isEqualTo(2);
+    }
+
     private static HttpServer startPaystackStub() {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
@@ -153,6 +212,7 @@ class PaymentServiceIntegrationTest {
             "11_showcase_multiple_photos.sql",
             "12_add_user_cohort.sql",
             "13_payments.sql",
+            "14_payments_per_student.sql",
         };
         Path initDir = Path.of("../database/init");
         try (Connection conn = DriverManager.getConnection(

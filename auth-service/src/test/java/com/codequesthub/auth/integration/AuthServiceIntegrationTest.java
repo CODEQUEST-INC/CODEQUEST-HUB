@@ -121,6 +121,7 @@ class AuthServiceIntegrationTest {
             "11_showcase_multiple_photos.sql",
             "12_add_user_cohort.sql",
             "13_payments.sql",
+            "14_payments_per_student.sql",
         };
         Path initDir = Path.of("../database/init");
         try (Connection conn = DriverManager.getConnection(

@@ -15,6 +15,9 @@ public class PaymentRecord {
     @Column(name = "group_id", nullable = false)
     private UUID groupId;
 
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
     @Column(name = "amount_pesewas", nullable = false)
     private int amountPesewas;
 
@@ -49,6 +52,8 @@ public class PaymentRecord {
     public UUID getId() { return id; }
     public UUID getGroupId() { return groupId; }
     public void setGroupId(UUID v) { this.groupId = v; }
+    public UUID getUserId() { return userId; }
+    public void setUserId(UUID v) { this.userId = v; }
     public int getAmountPesewas() { return amountPesewas; }
     public void setAmountPesewas(int v) { this.amountPesewas = v; }
     public String getCurrency() { return currency; }

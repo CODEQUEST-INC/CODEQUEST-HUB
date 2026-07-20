@@ -7,7 +7,9 @@ import Text from '../components/Text';
 import { getMyGroup, GroupResponse, resolveGroupPhotoUrl, uploadGroupPhoto } from '../api/groups';
 import {
   getFeeConfig,
-  getGroupPaymentStatus,
+  getGroupPaymentSummary,
+  getMyPaymentStatus,
+  GroupPaymentSummary,
   initializePayment,
   PaymentFeeConfig,
   PaymentRecord,
@@ -29,7 +31,7 @@ function formatAmount(amountPesewas: number, currency: string): string {
 }
 
 export default function GroupWorkspaceScreen() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const [group, setGroup] = useState<GroupResponse | null>(null);
@@ -38,11 +40,27 @@ export default function GroupWorkspaceScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [feeConfig, setFeeConfig] = useState<PaymentFeeConfig | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<PaymentRecord | null>(null);
+  const [myPayment, setMyPayment] = useState<PaymentRecord | null>(null);
+  const [paymentSummary, setPaymentSummary] = useState<GroupPaymentSummary | null>(null);
   const [shirtSize, setShirtSize] = useState('M');
   const [payingLoading, setPayingLoading] = useState(false);
   const [verifyingLoading, setVerifyingLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const refreshPaymentInfo = useCallback(
+    async (g: GroupResponse) => {
+      if (!token) return;
+      const [fee, mine, summary] = await Promise.all([
+        getFeeConfig(g.cohortId, token).catch(() => null),
+        getMyPaymentStatus(g.id, token).catch(() => null),
+        getGroupPaymentSummary(g.id, token).catch(() => null),
+      ]);
+      setFeeConfig(fee);
+      setMyPayment(mine);
+      setPaymentSummary(summary);
+    },
+    [token]
+  );
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -51,14 +69,9 @@ export default function GroupWorkspaceScreen() {
     try {
       const g = await getMyGroup(token);
       setGroup(g);
-      // Payment info is optional — a cohort with no fee configured, or a
-      // group with no payment attempt yet, is a normal state, not an error.
-      const [fee, status] = await Promise.all([
-        getFeeConfig(g.cohortId, token).catch(() => null),
-        getGroupPaymentStatus(g.id, token).catch(() => null),
-      ]);
-      setFeeConfig(fee);
-      setPaymentStatus(status);
+      // Payment info is optional — a cohort with no fee configured, or no
+      // payment attempts yet, is a normal state, not an error.
+      await refreshPaymentInfo(g);
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
         setGroup(null);
@@ -68,7 +81,7 @@ export default function GroupWorkspaceScreen() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, refreshPaymentInfo]);
 
   useFocusEffect(
     useCallback(() => {
@@ -118,8 +131,7 @@ export default function GroupWorkspaceScreen() {
       // No public callback URL exists for Paystack to redirect back to, so we
       // re-fetch status ourselves (picking up the new "pending" record) and
       // rely on the "I've paid — verify" button once the student returns.
-      const status = await getGroupPaymentStatus(group.id, token).catch(() => null);
-      setPaymentStatus(status);
+      await refreshPaymentInfo(group);
       await Linking.openURL(result.authorizationUrl);
     } catch (e) {
       setPaymentError(e instanceof Error ? e.message : 'Failed to start payment');
@@ -129,12 +141,15 @@ export default function GroupWorkspaceScreen() {
   };
 
   const onVerifyPayment = async () => {
-    if (!token || !paymentStatus) return;
+    if (!token || !group || !myPayment) return;
     setPaymentError(null);
     setVerifyingLoading(true);
     try {
-      const record = await verifyPayment(paymentStatus.paystackReference, token);
-      setPaymentStatus(record);
+      const record = await verifyPayment(myPayment.paystackReference, token);
+      setMyPayment(record);
+      // A successful verify may have just made the group fully paid.
+      const summary = await getGroupPaymentSummary(group.id, token).catch(() => null);
+      setPaymentSummary(summary);
     } catch (e) {
       setPaymentError(e instanceof Error ? e.message : 'Failed to verify payment');
     } finally {
@@ -203,17 +218,14 @@ export default function GroupWorkspaceScreen() {
       {feeConfig ? (
         <Card style={styles.paymentCard} tint={colors.accents.pink}>
           <View style={styles.paymentHeaderRow}>
-            <Text style={styles.cardTitle}>Registration fee</Text>
-            <PaidBadge status={paymentStatus?.status ?? 'unpaid'} />
+            <Text style={styles.cardTitle}>My registration fee</Text>
+            <PaidBadge status={myPayment?.status ?? 'unpaid'} />
           </View>
-          <Text style={styles.cardMeta}>
-            {formatAmount(feeConfig.amountPesewas * group.members.length, feeConfig.currency)} total for{' '}
-            {group.members.length} member{group.members.length === 1 ? '' : 's'}
-          </Text>
+          <Text style={styles.cardMeta}>{formatAmount(feeConfig.amountPesewas, feeConfig.currency)}</Text>
 
           {paymentError ? <Text style={styles.error}>{paymentError}</Text> : null}
 
-          {paymentStatus?.status !== 'success' ? (
+          {myPayment?.status !== 'success' ? (
             <>
               <Text style={styles.hint}>Shirt size</Text>
               <View style={styles.shirtRow}>
@@ -238,7 +250,7 @@ export default function GroupWorkspaceScreen() {
                 )}
               </Pressable>
 
-              {paymentStatus?.status === 'pending' ? (
+              {myPayment?.status === 'pending' ? (
                 <Pressable style={styles.verifyButton} onPress={onVerifyPayment} disabled={verifyingLoading}>
                   {verifyingLoading ? (
                     <ActivityIndicator color={colors.primary} />
@@ -249,6 +261,40 @@ export default function GroupWorkspaceScreen() {
               ) : null}
             </>
           ) : null}
+        </Card>
+      ) : null}
+
+      {feeConfig && paymentSummary ? (
+        <Card
+          style={styles.paymentCard}
+          tint={paymentSummary.allPaid ? colors.accents.green : colors.accents.amber}
+        >
+          <View style={styles.paymentHeaderRow}>
+            <Text style={styles.cardTitle}>Group payment status</Text>
+            <Text style={styles.cardMeta}>
+              {paymentSummary.paidCount} of {paymentSummary.totalMembers} paid
+            </Text>
+          </View>
+          {paymentSummary.allPaid ? (
+            <View style={styles.allPaidBanner}>
+              <Feather name="check-circle" size={16} color={colors.accents.green.fg} />
+              <Text style={[styles.allPaidText, { color: colors.accents.green.fg }]}>
+                Everyone in the group has paid!
+              </Text>
+            </View>
+          ) : null}
+          {paymentSummary.members.map((m) => (
+            <View key={m.userId} style={styles.memberPaymentRow}>
+              <Text style={styles.memberPaymentName}>
+                {userLabel(m.userId, names)}
+                {m.userId === user?.id ? ' (you)' : ''}
+              </Text>
+              <View style={styles.memberPaymentRight}>
+                {m.shirtSize ? <Text style={styles.memberPaymentShirt}>{m.shirtSize}</Text> : null}
+                <PaidBadge status={m.status} />
+              </View>
+            </View>
+          ))}
         </Card>
       ) : null}
 
@@ -335,6 +381,19 @@ function createStyles(colors: Colors) {
       alignItems: 'center',
     },
     verifyButtonText: { color: colors.primary, fontWeight: '600' },
+    allPaidBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    allPaidText: { ...typography.body, fontWeight: '600' },
+    memberPaymentRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.xs,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    memberPaymentName: { ...typography.body, flex: 1 },
+    memberPaymentRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    memberPaymentShirt: { ...typography.caption, color: colors.textMuted },
     memberList: { flex: 1 },
     memberRow: {
       flexDirection: 'row',

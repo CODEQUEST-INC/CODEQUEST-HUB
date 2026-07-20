@@ -1,7 +1,9 @@
 package com.codequesthub.payment.service;
 
-import com.codequesthub.payment.dto.GroupPaymentStatus;
+import com.codequesthub.payment.dto.CohortGroupPaymentSummary;
+import com.codequesthub.payment.dto.GroupPaymentSummary;
 import com.codequesthub.payment.dto.InitializePaymentResponse;
+import com.codequesthub.payment.dto.MemberPaymentStatus;
 import com.codequesthub.payment.entity.*;
 import com.codequesthub.payment.repository.*;
 import jakarta.transaction.Transactional;
@@ -18,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -72,14 +75,20 @@ public class PaymentService {
         if (!memberRepo.existsByGroupIdAndUserId(groupId, userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group");
         }
+        recordRepo.findTopByGroupIdAndUserIdOrderByCreatedAtDesc(groupId, userId)
+            .filter(r -> r.getStatus() == PaymentStatus.success)
+            .ifPresent(r -> {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You have already paid for this group");
+            });
+
         GroupView group = groupViewRepo.findById(groupId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
         PaymentFeeConfig config = getFeeConfig(group.getCohortId());
         UserView user = userViewRepo.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        long memberCount = memberRepo.countByGroupId(groupId);
-        int amount = config.getAmountPesewas() * (int) memberCount;
+        // Each student pays their own flat fee — no more multiplying by member count.
+        int amount = config.getAmountPesewas();
         String reference = UUID.randomUUID().toString();
 
         HttpHeaders headers = new HttpHeaders();
@@ -109,6 +118,7 @@ public class PaymentService {
 
         PaymentRecord record = new PaymentRecord();
         record.setGroupId(groupId);
+        record.setUserId(userId);
         record.setAmountPesewas(amount);
         record.setCurrency(config.getCurrency());
         record.setShirtSize(shirtSize);
@@ -153,21 +163,51 @@ public class PaymentService {
         return recordRepo.save(record);
     }
 
-    public Optional<PaymentRecord> getGroupPaymentStatus(UUID groupId, UUID userId, String role) {
-        checkCanView(groupId, userId, role);
-        return recordRepo.findTopByGroupIdOrderByCreatedAtDesc(groupId);
+    // The calling student's own latest payment attempt for this group.
+    public Optional<PaymentRecord> getMyPaymentStatus(UUID groupId, UUID userId) {
+        if (!memberRepo.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group");
+        }
+        return recordRepo.findTopByGroupIdAndUserIdOrderByCreatedAtDesc(groupId, userId);
     }
 
-    public List<GroupPaymentStatus> getCohortPaymentStatuses(UUID cohortId) {
+    // Per-member breakdown for a single group — any member, the group's supervisor, or admin.
+    public GroupPaymentSummary getGroupPaymentSummary(UUID groupId, UUID userId, String role) {
+        checkCanView(groupId, userId, role);
+        return summarize(groupId);
+    }
+
+    public List<CohortGroupPaymentSummary> getCohortPaymentStatuses(UUID cohortId) {
         List<GroupView> groups = groupViewRepo.findByCohortId(cohortId);
         return groups.stream()
             .map(g -> {
-                Optional<PaymentRecord> record = recordRepo.findTopByGroupIdOrderByCreatedAtDesc(g.getId());
-                String status = record.map(r -> r.getStatus().name()).orElse("unpaid");
-                Integer amount = record.map(PaymentRecord::getAmountPesewas).orElse(null);
-                return new GroupPaymentStatus(g.getId(), g.getGroupNumber(), g.getName(), status, amount);
+                GroupPaymentSummary summary = summarize(g.getId());
+                return new CohortGroupPaymentSummary(g.getId(), g.getGroupNumber(), g.getName(),
+                    summary.getTotalMembers(), summary.getPaidCount(), summary.isAllPaid(), summary.getMembers());
             })
             .toList();
+    }
+
+    private GroupPaymentSummary summarize(UUID groupId) {
+        List<GroupMemberView> members = memberRepo.findByGroupId(groupId);
+        Map<UUID, PaymentRecord> latestByUser = new HashMap<>();
+        for (PaymentRecord record : recordRepo.findByGroupIdOrderByCreatedAtDesc(groupId)) {
+            latestByUser.putIfAbsent(record.getUserId(), record);
+        }
+
+        List<MemberPaymentStatus> memberStatuses = members.stream()
+            .map(m -> {
+                PaymentRecord record = latestByUser.get(m.getUserId());
+                String status = record != null ? record.getStatus().name() : "unpaid";
+                String shirtSize = record != null ? record.getShirtSize() : null;
+                return new MemberPaymentStatus(m.getUserId(), status, shirtSize);
+            })
+            .toList();
+
+        int paidCount = (int) memberStatuses.stream().filter(m -> "success".equals(m.getStatus())).count();
+        boolean allPaid = !memberStatuses.isEmpty() && paidCount == memberStatuses.size();
+
+        return new GroupPaymentSummary(groupId, memberStatuses.size(), paidCount, allPaid, memberStatuses);
     }
 
     private void checkCanView(UUID groupId, UUID userId, String role) {

@@ -61,12 +61,20 @@ public class PaymentController {
         return ResponseEntity.ok(Map.of("data", paymentService.verifyPayment(reference)));
     }
 
-    // group members, the group's supervisor, or admin
-    @GetMapping("/group/{groupId}")
-    public ResponseEntity<?> groupStatus(@PathVariable UUID groupId, Authentication auth) {
+    // the calling student's own payment status for this group
+    @GetMapping("/mine/{groupId}")
+    public ResponseEntity<?> myStatus(@PathVariable UUID groupId, Authentication auth) {
         UUID userId = UUID.fromString((String) auth.getPrincipal());
-        var status = paymentService.getGroupPaymentStatus(groupId, userId, roleOf(auth)).orElse(null);
+        var status = paymentService.getMyPaymentStatus(groupId, userId).orElse(null);
         return ResponseEntity.ok(Map.of("data", status));
+    }
+
+    // per-member breakdown for the group — any member, the group's supervisor, or admin
+    @GetMapping("/group/{groupId}/summary")
+    public ResponseEntity<?> groupSummary(@PathVariable UUID groupId, Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        var summary = paymentService.getGroupPaymentSummary(groupId, userId, roleOf(auth));
+        return ResponseEntity.ok(Map.of("data", summary));
     }
 
     private String roleOf(Authentication auth) {

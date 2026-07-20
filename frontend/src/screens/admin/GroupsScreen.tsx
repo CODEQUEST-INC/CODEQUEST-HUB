@@ -12,7 +12,7 @@ import {
   resolveGroupPhotoUrl,
   setGroupLeader,
 } from '../../api/groups';
-import { getCohortPaymentStatuses, GroupPaymentStatus } from '../../api/payments';
+import { CohortGroupPaymentSummary, getCohortPaymentStatuses } from '../../api/payments';
 import { UserSearchResult } from '../../api/users';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
@@ -29,7 +29,7 @@ export default function GroupsScreen() {
   const styles = createStyles(colors);
   const [cohortId, setCohortId] = useState<string | null>(null);
   const [groups, setGroups] = useState<GroupResponse[]>([]);
-  const [paymentStatuses, setPaymentStatuses] = useState<GroupPaymentStatus[]>([]);
+  const [paymentStatuses, setPaymentStatuses] = useState<CohortGroupPaymentSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,9 +72,7 @@ export default function GroupsScreen() {
     }, [load])
   );
 
-  const paidGroupIds = new Set(
-    paymentStatuses.filter((s) => s.status === 'success').map((s) => s.groupId)
-  );
+  const paidGroupIds = new Set(paymentStatuses.filter((s) => s.allPaid).map((s) => s.groupId));
 
   const allUserIds = groups.flatMap((g) => [
     ...g.members.map((m) => m.userId),

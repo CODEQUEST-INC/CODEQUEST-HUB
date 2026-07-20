@@ -15,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -91,16 +92,16 @@ class PaymentServiceTest {
     }
 
     @Test
-    void initializePayment_amountIsFeeTimesMemberCount() {
+    void initializePayment_amountIsFlatFeePerStudent_notMultipliedByGroupSize() {
         UUID groupId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID cohortId = UUID.randomUUID();
 
         when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(recordRepo.findTopByGroupIdAndUserIdOrderByCreatedAtDesc(groupId, userId)).thenReturn(Optional.empty());
         when(groupViewRepo.findById(groupId)).thenReturn(Optional.of(groupWith(groupId, cohortId)));
         when(feeConfigRepo.findByCohortId(cohortId)).thenReturn(Optional.of(feeConfigWith(cohortId, 5000)));
         when(userViewRepo.findById(userId)).thenReturn(Optional.of(userWith(userId, "student@example.com")));
-        when(memberRepo.countByGroupId(groupId)).thenReturn(4L);
 
         mockServer.expect(requestTo("https://api.paystack.co/transaction/initialize"))
             .andExpect(method(HttpMethod.POST))
@@ -115,16 +116,29 @@ class PaymentServiceTest {
     }
 
     @Test
+    void initializePayment_alreadyPaid_badRequest() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(recordRepo.findTopByGroupIdAndUserIdOrderByCreatedAtDesc(groupId, userId))
+            .thenReturn(Optional.of(recordWith("ref-paid", PaymentStatus.success)));
+
+        assertThatThrownBy(() -> service().initializePayment(userId, groupId, "M"))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("already paid");
+    }
+
+    @Test
     void initializePayment_paystackUnreachable_badGateway() {
         UUID groupId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID cohortId = UUID.randomUUID();
 
         when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(recordRepo.findTopByGroupIdAndUserIdOrderByCreatedAtDesc(groupId, userId)).thenReturn(Optional.empty());
         when(groupViewRepo.findById(groupId)).thenReturn(Optional.of(groupWith(groupId, cohortId)));
         when(feeConfigRepo.findByCohortId(cohortId)).thenReturn(Optional.of(feeConfigWith(cohortId, 5000)));
         when(userViewRepo.findById(userId)).thenReturn(Optional.of(userWith(userId, "student@example.com")));
-        when(memberRepo.countByGroupId(groupId)).thenReturn(1L);
 
         mockServer.expect(requestTo("https://api.paystack.co/transaction/initialize"))
             .andRespond(request -> { throw new IOException("connect timed out"); });
@@ -178,7 +192,7 @@ class PaymentServiceTest {
     }
 
     @Test
-    void getGroupPaymentStatus_supervisorOfDifferentGroup_forbidden() {
+    void getGroupPaymentSummary_supervisorOfDifferentGroup_forbidden() {
         UUID groupId = UUID.randomUUID();
         UUID supervisorId = UUID.randomUUID();
         UUID otherSupervisorId = UUID.randomUUID();
@@ -186,8 +200,60 @@ class PaymentServiceTest {
         ReflectionTestUtils.setField(group, "supervisorId", otherSupervisorId);
         when(groupViewRepo.findById(groupId)).thenReturn(Optional.of(group));
 
-        assertThatThrownBy(() -> service().getGroupPaymentStatus(groupId, supervisorId, "supervisor"))
+        assertThatThrownBy(() -> service().getGroupPaymentSummary(groupId, supervisorId, "supervisor"))
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("not the assigned supervisor");
+    }
+
+    private GroupMemberView memberWith(UUID groupId, UUID userId) {
+        GroupMemberView m = new GroupMemberView();
+        ReflectionTestUtils.setField(m, "groupId", groupId);
+        ReflectionTestUtils.setField(m, "userId", userId);
+        return m;
+    }
+
+    private PaymentRecord recordFor(UUID groupId, UUID userId, PaymentStatus status, String shirtSize) {
+        PaymentRecord r = recordWith(UUID.randomUUID().toString(), status);
+        r.setGroupId(groupId);
+        r.setUserId(userId);
+        r.setShirtSize(shirtSize);
+        return r;
+    }
+
+    @Test
+    void getGroupPaymentSummary_allMembersPaid_allPaidTrue() {
+        UUID groupId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        UUID m1 = UUID.randomUUID();
+        UUID m2 = UUID.randomUUID();
+        when(memberRepo.findByGroupId(groupId)).thenReturn(List.of(memberWith(groupId, m1), memberWith(groupId, m2)));
+        when(recordRepo.findByGroupIdOrderByCreatedAtDesc(groupId)).thenReturn(List.of(
+            recordFor(groupId, m1, PaymentStatus.success, "M"),
+            recordFor(groupId, m2, PaymentStatus.success, "L")));
+
+        var summary = service().getGroupPaymentSummary(groupId, adminId, "admin");
+
+        assertThat(summary.getTotalMembers()).isEqualTo(2);
+        assertThat(summary.getPaidCount()).isEqualTo(2);
+        assertThat(summary.isAllPaid()).isTrue();
+    }
+
+    @Test
+    void getGroupPaymentSummary_someMembersUnpaid_allPaidFalse() {
+        UUID groupId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        UUID m1 = UUID.randomUUID();
+        UUID m2 = UUID.randomUUID();
+        when(memberRepo.findByGroupId(groupId)).thenReturn(List.of(memberWith(groupId, m1), memberWith(groupId, m2)));
+        when(recordRepo.findByGroupIdOrderByCreatedAtDesc(groupId))
+            .thenReturn(List.of(recordFor(groupId, m1, PaymentStatus.success, "M")));
+
+        var summary = service().getGroupPaymentSummary(groupId, adminId, "admin");
+
+        assertThat(summary.getPaidCount()).isEqualTo(1);
+        assertThat(summary.isAllPaid()).isFalse();
+        var m2Status = summary.getMembers().stream().filter(ms -> ms.getUserId().equals(m2)).findFirst().orElseThrow();
+        assertThat(m2Status.getStatus()).isEqualTo("unpaid");
+        assertThat(m2Status.getShirtSize()).isNull();
     }
 }
