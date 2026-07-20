@@ -116,7 +116,7 @@ auth-service/        group-service/       project-service/
 task-service/         judging-service/     showcase-service/
 gateway-service/      common-security/     (shared library)
 database/init/        (SQL schema, numbered migrations)
-frontend/              (Expo app)
+frontend/              (EXPO APP). 
 ```
 
 .
