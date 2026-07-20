@@ -6,6 +6,7 @@ import CriteriaScreen from '../screens/admin/CriteriaScreen';
 import GroupsScreen from '../screens/admin/GroupsScreen';
 import JudgesScreen from '../screens/admin/JudgesScreen';
 import LeaderboardScreen from '../screens/admin/LeaderboardScreen';
+import PaymentsScreen from '../screens/admin/PaymentsScreen';
 import { useTheme } from '../theme';
 import { headerProfileButton } from './headerProfileButton';
 import { AdminStackParamList } from './types';
@@ -28,6 +29,7 @@ export default function AdminStack() {
       <Stack.Screen name="Criteria" component={CriteriaScreen} options={{ title: 'Judging Criteria' }} />
       <Stack.Screen name="Judges" component={JudgesScreen} options={{ title: 'Judges' }} />
       <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaderboard' }} />
+      <Stack.Screen name="Payments" component={PaymentsScreen} options={{ title: 'Payments' }} />
     </Stack.Navigator>
   );
 }
