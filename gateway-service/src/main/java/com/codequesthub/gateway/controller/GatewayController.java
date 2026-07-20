@@ -46,7 +46,8 @@ public class GatewayController {
                               @Value("${project.service.url}") String projectServiceUrl,
                               @Value("${task.service.url}") String taskServiceUrl,
                               @Value("${judging.service.url}") String judgingServiceUrl,
-                              @Value("${showcase.service.url}") String showcaseServiceUrl) {
+                              @Value("${showcase.service.url}") String showcaseServiceUrl,
+                              @Value("${payment.service.url}") String paymentServiceUrl) {
         this.restTemplate = restTemplate;
         this.routes = List.of(
                 new Route("/api/auth", authServiceUrl, null),
@@ -55,7 +56,8 @@ public class GatewayController {
                 new Route("/api/proposals", projectServiceUrl, PROJECT_MAX_BYTES),
                 new Route("/api/tasks", taskServiceUrl, null),
                 new Route("/api/judging", judgingServiceUrl, null),
-                new Route("/api/showcase", showcaseServiceUrl, SHOWCASE_MAX_BYTES)
+                new Route("/api/showcase", showcaseServiceUrl, SHOWCASE_MAX_BYTES),
+                new Route("/api/payments", paymentServiceUrl, null)
         );
     }
 

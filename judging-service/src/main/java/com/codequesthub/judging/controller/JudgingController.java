@@ -5,6 +5,7 @@ import com.codequesthub.judging.entity.Judge;
 import com.codequesthub.judging.entity.JudgingCriterion;
 import com.codequesthub.judging.entity.Scorecard;
 import com.codequesthub.judging.service.JudgingService;
+import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -88,7 +89,7 @@ public class JudgingController {
     @PostMapping("/scorecards")
     public ResponseEntity<?> submitScorecard(@Valid @RequestBody SubmitScorecardRequest req, Authentication auth) {
         UUID judgeUserId = UUID.fromString((String) auth.getPrincipal());
-        Scorecard s = judgingService.submitScorecard(judgeUserId, req);
+        Scorecard s = judgingService.submitScorecard(judgeUserId, roleOf(auth), req);
         return ResponseEntity.ok(Map.of("data", s));
     }
 
@@ -113,5 +114,10 @@ public class JudgingController {
     public ResponseEntity<?> getLeaderboard(@RequestParam UUID cohortId) {
         List<LeaderboardEntry> leaderboard = judgingService.getLeaderboard(cohortId);
         return ResponseEntity.ok(Map.of("data", leaderboard));
+    }
+
+    private String roleOf(Authentication auth) {
+        Claims claims = (Claims) auth.getDetails();
+        return claims.get("role", String.class);
     }
 }

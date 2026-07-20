@@ -23,6 +23,7 @@ function getItems(colors: Colors): Item[] {
     { label: 'Judging criteria', route: 'Criteria', icon: 'sliders', tint: colors.accents.violet },
     { label: 'Assigned judges', route: 'Judges', icon: 'users', tint: colors.accents.teal },
     { label: 'Leaderboard', route: 'Leaderboard', icon: 'award', tint: colors.accents.amber },
+    { label: 'Payments', route: 'Payments', icon: 'credit-card', tint: colors.accents.pink },
   ];
 }
 

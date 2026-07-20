@@ -131,11 +131,15 @@ public class JudgingService {
     // ============================================================
 
     @Transactional
-    public Scorecard submitScorecard(UUID judgeUserId, SubmitScorecardRequest req) {
+    public Scorecard submitScorecard(UUID judgeUserId, String role, SubmitScorecardRequest req) {
         GroupView group = groupViewRepo.findById(req.getGroupId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
 
-        if (!judgeRepo.existsByCohortIdAndUserId(group.getCohortId(), judgeUserId)) {
+        // Admins and supervisors carry judging privileges inherently; anyone else
+        // needs an explicit per-cohort judge assignment (e.g. an external judge).
+        boolean canJudge = "admin".equals(role) || "supervisor".equals(role)
+            || judgeRepo.existsByCohortIdAndUserId(group.getCohortId(), judgeUserId);
+        if (!canJudge) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                 "You are not an assigned judge for this group's cohort");
         }

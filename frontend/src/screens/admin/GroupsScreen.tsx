@@ -12,11 +12,13 @@ import {
   resolveGroupPhotoUrl,
   setGroupLeader,
 } from '../../api/groups';
+import { CohortGroupPaymentSummary, getCohortPaymentStatuses } from '../../api/payments';
 import { UserSearchResult } from '../../api/users';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
+import PaidBadge from '../../components/PaidBadge';
 import UserPicker from '../../components/UserPicker';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
@@ -27,6 +29,7 @@ export default function GroupsScreen() {
   const styles = createStyles(colors);
   const [cohortId, setCohortId] = useState<string | null>(null);
   const [groups, setGroups] = useState<GroupResponse[]>([]);
+  const [paymentStatuses, setPaymentStatuses] = useState<CohortGroupPaymentSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +53,10 @@ export default function GroupsScreen() {
     try {
       const data = await listGroupsByCohort(cohortId, token);
       if (requestIdRef.current === requestId) setGroups(data);
+      // Payment info is optional — a cohort with no fee configured yet is a
+      // normal state, not an error, so a failure here shouldn't block the list.
+      const statuses = await getCohortPaymentStatuses(cohortId, token).catch(() => []);
+      if (requestIdRef.current === requestId) setPaymentStatuses(statuses);
     } catch (e) {
       if (requestIdRef.current === requestId) {
         setError(e instanceof Error ? e.message : 'Failed to load groups');
@@ -64,6 +71,8 @@ export default function GroupsScreen() {
       load();
     }, [load])
   );
+
+  const paidGroupIds = new Set(paymentStatuses.filter((s) => s.allPaid).map((s) => s.groupId));
 
   const allUserIds = groups.flatMap((g) => [
     ...g.members.map((m) => m.userId),
@@ -180,12 +189,13 @@ export default function GroupsScreen() {
       ) : null}
 
       {groups.map((g) => (
-        <Card key={g.id}>
+        <Card key={g.id} tint={paidGroupIds.has(g.id) ? colors.accents.green : undefined}>
           <View style={styles.groupHeader}>
             <Avatar name={g.name ?? `Group ${g.groupNumber}`} size={32} photoUrl={resolveGroupPhotoUrl(g.photoUrl)} />
-            <Text style={styles.cardTitle}>
+            <Text style={[styles.cardTitle, styles.groupHeaderTitle]}>
               Group {g.groupNumber} {g.name ? `— ${g.name}` : ''}
             </Text>
+            {paidGroupIds.has(g.id) ? <PaidBadge status="success" /> : null}
           </View>
           {g.supervisorId ? (
             <Text style={styles.cardMeta}>Supervisor: {userLabel(g.supervisorId, names)}</Text>
@@ -261,6 +271,7 @@ function createStyles(colors: Colors) {
   return StyleSheet.create({
     container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
     groupHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    groupHeaderTitle: { flex: 1 },
     cardTitle: { ...typography.body, fontWeight: '600' },
     cardMeta: { ...typography.caption, color: colors.textMuted },
     hint: { ...typography.caption, color: colors.textMuted },

@@ -11,7 +11,7 @@ import { Colors, radius, spacing, typography, useTheme } from '../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
-const ROLES: UserRole[] = ['student', 'supervisor', 'admin', 'mentor'];
+const ROLES: UserRole[] = ['student', 'supervisor', 'admin'];
 
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
