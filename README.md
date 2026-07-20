@@ -1,6 +1,6 @@
 # CodeQuestHub
 
-Backend + mobile app for **CodeQuest 2026** (KNUST), a hackathon-style capstone program: students form groups, submit project proposals, get judged, track tasks, and showcase finished projects.
+Backend + mobile application for **CodeQuest 2026** (KNUST), a hackathon-style capstone program: students form groups, submit project proposals, get judged, track tasks, and showcase finished projects.
 
 ## Architecture
 
@@ -118,3 +118,5 @@ gateway-service/      common-security/     (shared library)
 database/init/        (SQL schema, numbered migrations)
 frontend/              (Expo app)
 ```
+
+.
