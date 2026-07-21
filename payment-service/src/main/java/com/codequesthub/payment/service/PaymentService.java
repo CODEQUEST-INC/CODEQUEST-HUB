@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class PaymentService {
@@ -174,27 +175,50 @@ public class PaymentService {
     // Per-member breakdown for a single group — any member, the group's supervisor, or admin.
     public GroupPaymentSummary getGroupPaymentSummary(UUID groupId, UUID userId, String role) {
         checkCanView(groupId, userId, role);
-        return summarize(groupId);
+        List<GroupMemberView> members = memberRepo.findByGroupId(groupId);
+        Map<UUID, PaymentRecord> latestByUser = latestRecordByUser(recordRepo.findByGroupIdOrderByCreatedAtDesc(groupId));
+        return buildSummary(groupId, members, latestByUser);
     }
 
     public List<CohortGroupPaymentSummary> getCohortPaymentStatuses(UUID cohortId) {
         List<GroupView> groups = groupViewRepo.findByCohortId(cohortId);
+        List<UUID> groupIds = groups.stream().map(GroupView::getId).toList();
+
+        // Batch-fetch members and payment records for every group in the cohort
+        // in two queries total, instead of two queries per group — with a
+        // cohort's worth of groups this turned one admin screen load into
+        // dozens of sequential round-trips to Neon.
+        Map<UUID, List<GroupMemberView>> membersByGroup = memberRepo.findByGroupIdIn(groupIds).stream()
+            .collect(Collectors.groupingBy(GroupMemberView::getGroupId));
+
+        Map<UUID, Map<UUID, PaymentRecord>> latestByGroupAndUser = new HashMap<>();
+        for (PaymentRecord record : recordRepo.findByGroupIdInOrderByCreatedAtDesc(groupIds)) {
+            latestByGroupAndUser
+                .computeIfAbsent(record.getGroupId(), k -> new HashMap<>())
+                .putIfAbsent(record.getUserId(), record);
+        }
+
         return groups.stream()
             .map(g -> {
-                GroupPaymentSummary summary = summarize(g.getId());
+                List<GroupMemberView> members = membersByGroup.getOrDefault(g.getId(), List.of());
+                Map<UUID, PaymentRecord> latestByUser = latestByGroupAndUser.getOrDefault(g.getId(), Map.of());
+                GroupPaymentSummary summary = buildSummary(g.getId(), members, latestByUser);
                 return new CohortGroupPaymentSummary(g.getId(), g.getGroupNumber(), g.getName(),
                     summary.getTotalMembers(), summary.getPaidCount(), summary.isAllPaid(), summary.getMembers());
             })
             .toList();
     }
 
-    private GroupPaymentSummary summarize(UUID groupId) {
-        List<GroupMemberView> members = memberRepo.findByGroupId(groupId);
+    private Map<UUID, PaymentRecord> latestRecordByUser(List<PaymentRecord> recordsNewestFirst) {
         Map<UUID, PaymentRecord> latestByUser = new HashMap<>();
-        for (PaymentRecord record : recordRepo.findByGroupIdOrderByCreatedAtDesc(groupId)) {
+        for (PaymentRecord record : recordsNewestFirst) {
             latestByUser.putIfAbsent(record.getUserId(), record);
         }
+        return latestByUser;
+    }
 
+    private GroupPaymentSummary buildSummary(UUID groupId, List<GroupMemberView> members,
+                                              Map<UUID, PaymentRecord> latestByUser) {
         List<MemberPaymentStatus> memberStatuses = members.stream()
             .map(m -> {
                 PaymentRecord record = latestByUser.get(m.getUserId());

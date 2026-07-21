@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public interface ShowcasePhotoRepository extends JpaRepository<ShowcasePhoto, UUID> {
     List<ShowcasePhoto> findByEntryIdOrderByPositionAsc(UUID entryId);
+    List<ShowcasePhoto> findByEntryIdInOrderByPositionAsc(List<UUID> entryIds);
     long countByEntryId(UUID entryId);
     void deleteByEntryId(UUID entryId);
 }

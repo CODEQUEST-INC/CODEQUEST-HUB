@@ -13,6 +13,8 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, UUID> 
 
     List<GroupMember> findByGroupId(UUID groupId);
 
+    List<GroupMember> findByGroupIdIn(List<UUID> groupIds);
+
     boolean existsByGroupIdAndUserId(UUID groupId, UUID userId);
 
     @Query("SELECT gm FROM GroupMember gm WHERE gm.userId = :userId")

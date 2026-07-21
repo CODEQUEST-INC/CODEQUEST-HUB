@@ -11,4 +11,5 @@ public interface PaymentRecordRepository extends JpaRepository<PaymentRecord, UU
     Optional<PaymentRecord> findByPaystackReference(String paystackReference);
     Optional<PaymentRecord> findTopByGroupIdAndUserIdOrderByCreatedAtDesc(UUID groupId, UUID userId);
     List<PaymentRecord> findByGroupIdOrderByCreatedAtDesc(UUID groupId);
+    List<PaymentRecord> findByGroupIdInOrderByCreatedAtDesc(List<UUID> groupIds);
 }
