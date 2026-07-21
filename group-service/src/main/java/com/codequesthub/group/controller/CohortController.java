@@ -32,10 +32,10 @@ public class CohortController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", c));
     }
 
-    // any authenticated user
+    // any authenticated user (also called anonymously from the registration screen)
     @GetMapping
-    public ResponseEntity<?> listCohorts() {
-        List<Cohort> cohorts = cohortService.listCohorts();
+    public ResponseEntity<?> listCohorts(@RequestParam(required = false, defaultValue = "false") boolean activeOnly) {
+        List<Cohort> cohorts = cohortService.listCohorts(activeOnly);
         return ResponseEntity.ok(Map.of("data", cohorts));
     }
 

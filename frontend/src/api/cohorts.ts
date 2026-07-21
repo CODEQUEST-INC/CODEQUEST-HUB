@@ -11,8 +11,12 @@ export interface Cohort {
 // Public endpoint (no token needed) — the registration screen shows a cohort
 // picker before the user has one; admin screens still pass a token, which is
 // harmless since the route doesn't require it either way.
-export function listCohorts(token?: string | null): Promise<Cohort[]> {
-  return request<Cohort[]>('/api/cohorts', { token: token ?? undefined });
+// activeOnly filters out past/inactive cohorts — used by the registration
+// screen so a student can't pick a cohort that's no longer running; admin
+// screens omit it since they need to see and manage past cohorts too.
+export function listCohorts(token?: string | null, activeOnly?: boolean): Promise<Cohort[]> {
+  const query = activeOnly ? '?activeOnly=true' : '';
+  return request<Cohort[]>(`/api/cohorts${query}`, { token: token ?? undefined });
 }
 
 export interface CreateCohortRequest {

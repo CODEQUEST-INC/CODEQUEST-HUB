@@ -1,5 +1,7 @@
 package com.codequesthub.group.service;
 
+import com.codequesthub.group.dto.CreateCohortRequest;
+import com.codequesthub.group.dto.UpdateCohortRequest;
 import com.codequesthub.group.entity.Cohort;
 import com.codequesthub.group.repository.CohortRepository;
 import com.codequesthub.group.repository.GroupRepository;
@@ -16,7 +18,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -102,5 +106,54 @@ class CohortServiceTest {
         service().deleteCohort(id);
 
         verify(cohortRepo).delete(cohort);
+    }
+
+    @Test
+    void createCohort_alwaysStartsInactive() {
+        when(cohortRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        CreateCohortRequest req = new CreateCohortRequest();
+        req.setName("CodeQuest 2027");
+        req.setYear(2027);
+
+        Cohort created = service().createCohort(req);
+
+        assertThat(created.isActive()).isFalse();
+        verify(cohortRepo, never()).deactivateAllExcept(any());
+    }
+
+    @Test
+    void updateCohort_activatingIt_deactivatesEveryOtherCohortFirst() {
+        UUID id = UUID.randomUUID();
+        Cohort cohort = cohortWith(id);
+        when(cohortRepo.findById(id)).thenReturn(Optional.of(cohort));
+        when(cohortRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateCohortRequest req = new UpdateCohortRequest();
+        req.setName("CodeQuest 2026");
+        req.setYear(2026);
+        req.setActive(true);
+
+        Cohort updated = service().updateCohort(id, req);
+
+        verify(cohortRepo).deactivateAllExcept(id);
+        assertThat(updated.isActive()).isTrue();
+    }
+
+    @Test
+    void updateCohort_deactivatingIt_doesNotTouchOtherCohorts() {
+        UUID id = UUID.randomUUID();
+        Cohort cohort = cohortWith(id);
+        when(cohortRepo.findById(id)).thenReturn(Optional.of(cohort));
+        when(cohortRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateCohortRequest req = new UpdateCohortRequest();
+        req.setName("CodeQuest 2026");
+        req.setYear(2026);
+        req.setActive(false);
+
+        Cohort updated = service().updateCohort(id, req);
+
+        verify(cohortRepo, never()).deactivateAllExcept(any());
+        assertThat(updated.isActive()).isFalse();
     }
 }
