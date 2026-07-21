@@ -40,11 +40,15 @@ public class CohortService {
         Cohort c = new Cohort();
         c.setName(req.getName());
         c.setYear(req.getYear());
+        // Only one cohort may be active at a time — a newly created cohort
+        // starts inactive so it never silently displaces the current one;
+        // an admin must explicitly activate it via updateCohort.
+        c.setActive(false);
         return cohortRepo.save(c);
     }
 
-    public List<Cohort> listCohorts() {
-        return cohortRepo.findAll();
+    public List<Cohort> listCohorts(boolean activeOnly) {
+        return activeOnly ? cohortRepo.findByActiveTrue() : cohortRepo.findAll();
     }
 
     public Cohort getCohort(UUID id) {
@@ -57,6 +61,11 @@ public class CohortService {
         Cohort c = getCohort(id);
         c.setName(req.getName());
         c.setYear(req.getYear());
+        // Only one cohort may be active at a time — activating this one
+        // deactivates every other cohort first.
+        if (req.getActive()) {
+            cohortRepo.deactivateAllExcept(id);
+        }
         c.setActive(req.getActive());
         return cohortRepo.save(c);
     }

@@ -29,7 +29,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    listCohorts()
+    listCohorts(null, true)
       .then((list) => {
         setCohorts(list);
         if (list.length > 0) setCohortId(list[0].id);
