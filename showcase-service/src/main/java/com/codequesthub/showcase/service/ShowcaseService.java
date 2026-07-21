@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ShowcaseService {
@@ -173,8 +174,25 @@ public class ShowcaseService {
             ? entryRepo.findByCohortIdOrderByCreatedAtDesc(cohortId)
             : entryRepo.findAllByOrderByCreatedAtDesc();
 
+        // Batch-fetch groups and photos for every entry in two queries total,
+        // instead of two queries per entry — with a cohort's worth of entries
+        // this turned one gallery load into dozens of sequential round-trips.
+        List<UUID> groupIds = entries.stream().map(ShowcaseEntry::getGroupId).toList();
+        Map<UUID, GroupView> groupsById = groupViewRepo.findAllById(groupIds).stream()
+            .collect(Collectors.toMap(GroupView::getId, g -> g));
+
+        List<UUID> entryIds = entries.stream().map(ShowcaseEntry::getId).toList();
+        Map<UUID, List<ShowcasePhoto>> photosByEntry = photoRepo.findByEntryIdInOrderByPositionAsc(entryIds).stream()
+            .collect(Collectors.groupingBy(ShowcasePhoto::getEntryId));
+
         return entries.stream()
-            .map(e -> toResponse(e, groupViewRepo.findById(e.getGroupId()).orElse(null)))
+            .map(e -> {
+                GroupView group = groupsById.get(e.getGroupId());
+                return new ShowcaseEntryResponse(e,
+                    group == null ? null : group.getGroupNumber(),
+                    group == null ? null : group.getName(),
+                    photosByEntry.getOrDefault(e.getId(), List.of()));
+            })
             .toList();
     }
 

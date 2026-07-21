@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class GroupService {
@@ -175,8 +176,16 @@ public class GroupService {
     }
 
     public List<Map<String, Object>> listByCohort(UUID cohortId) {
-        return groupRepo.findByCohortId(cohortId).stream()
-            .map(group -> buildGroupResponse(group, memberRepo.findByGroupId(group.getId())))
+        List<Group> groups = groupRepo.findByCohortId(cohortId);
+        // Batch-fetch every member for every group in one query instead of one
+        // query per group — with a cohort's worth of groups this turned a
+        // single request into dozens of sequential round-trips to Neon.
+        List<UUID> groupIds = groups.stream().map(Group::getId).toList();
+        Map<UUID, List<GroupMember>> membersByGroupId = memberRepo.findByGroupIdIn(groupIds).stream()
+            .collect(Collectors.groupingBy(GroupMember::getGroupId));
+
+        return groups.stream()
+            .map(group -> buildGroupResponse(group, membersByGroupId.getOrDefault(group.getId(), List.of())))
             .toList();
     }
 
