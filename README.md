@@ -34,7 +34,7 @@ All services share one Postgres database (Neon) — there's no per-service datab
 ## Tech stack
 
 - **Backend**: Java 17, Spring Boot 3.2.5, Spring Data JPA, Spring Security, Maven, Postgres (Neon)
-- **Frontend**: Expo SDK 57, React Native 0.86, React 19, TypeScript, React Navigation v7
+- **Frontend**: Expo SDK 54, React Native 0.81, React 19, TypeScript, React Navigation v7
 - **Infra**: Docker Compose (local backend orchestration), GitHub Actions CI
 
 ## Prerequisites
