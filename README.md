@@ -81,7 +81,7 @@ npx expo start --web --port 19006
 
 Open `http://localhost:19006`. Port 19006 matters — it's the origin allow-listed in the gateway's CORS config (`GATEWAY_CORS_ALLOWED_ORIGINS`).
 
-To run on a phone on the same Wi-Fi network, use `npx expo start` (no `--web`) and scan the QR code with Expo Go — the app derives the API host from whatever address you loaded it from.
+To run on a phone on the same Wi-Fi network, use `npx expo start` (no `--web`) or use `npx expo start -c` to clean cache and rebuild app on expo then scan the QR code with Expo Go — the app derives the API host from whatever address you loaded it from.
 
 ## Database
 
