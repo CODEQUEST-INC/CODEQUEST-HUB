@@ -1,5 +1,6 @@
 package com.codequesthub.judging.config;
 
+import com.codequesthub.common.security.JsonAuthenticationEntryPoint;
 import com.codequesthub.common.security.JwtAuthFilter;
 import com.codequesthub.common.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,10 +27,17 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    public JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint() {
+        return new JsonAuthenticationEntryPoint();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter,
+                                            JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(jsonAuthenticationEntryPoint))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/judging/health", "/error").permitAll()
                 .anyRequest().authenticated()

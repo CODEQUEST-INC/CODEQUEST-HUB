@@ -50,9 +50,12 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
     (async () => {
       setLoading(true);
       try {
-        const group = await getMyGroup(token);
+        // Group and proposal are independent — fetch both at once.
+        const [group, myProposal] = await Promise.all([
+          getMyGroup(token),
+          getMyProposal(token).catch(() => null),
+        ]);
         setGroupId(group.id);
-        const myProposal = await getMyProposal(token).catch(() => null);
         setProposal(myProposal);
         if (myProposal?.status === 'approved') {
           const existing = await getShowcaseEntry(group.id).catch(() => null);

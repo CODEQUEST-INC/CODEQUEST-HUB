@@ -115,7 +115,10 @@ public class PaymentService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Paystack rejected the initialize request");
         }
         Map<String, Object> data = (Map<String, Object>) body.get("data");
-        String authorizationUrl = (String) data.get("authorization_url");
+        String authorizationUrl = data != null ? (String) data.get("authorization_url") : null;
+        if (authorizationUrl == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Paystack response did not include a checkout URL");
+        }
 
         PaymentRecord record = new PaymentRecord();
         record.setGroupId(groupId);

@@ -2,14 +2,18 @@ package com.codequesthub.common.web;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,6 +43,8 @@ import java.util.stream.Collectors;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
@@ -122,5 +128,41 @@ public class GlobalExceptionHandler {
         }
         ApiError body = new ApiError(HttpStatus.PAYLOAD_TOO_LARGE.value(), HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase(), message, request.getRequestURI());
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
+    }
+
+    // A @PathVariable/@RequestParam typed as UUID (or any other non-String type)
+    // couldn't be parsed from the raw value — e.g. GET /api/groups/not-a-uuid.
+    // Without this, the request never reaches a controller and falls through to
+    // Spring Boot's default error body instead of this API's consistent shape.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String typeName = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "expected type";
+        String message = ex.getName() + ": \"" + ex.getValue() + "\" is not a valid " + typeName;
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message, request.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    // A required @RequestParam was left off entirely (distinct from being present
+    // but malformed, which is MethodArgumentTypeMismatchException above) — e.g.
+    // GET /api/judging/leaderboard with no cohortId at all.
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        String message = "Missing required parameter \"" + ex.getParameterName() + "\"";
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message, request.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    // Last resort: any exception not explicitly handled above (a bug, an
+    // unexpected null, a third-party library surprise) would otherwise leak
+    // Spring Boot's default error body — inconsistent shape, and depending on
+    // config potentially including exception class names/stack traces. Log the
+    // real exception server-side (for debugging) but never expose its detail
+    // to the client.
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled exception on {}", request.getRequestURI(), ex);
+        ApiError body = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+            "Something went wrong on our end — please try again", request.getRequestURI());
+        return ResponseEntity.internalServerError().body(body);
     }
 }

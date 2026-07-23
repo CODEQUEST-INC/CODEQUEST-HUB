@@ -1,6 +1,8 @@
 package com.codequesthub.gateway.controller;
 
 import com.codequesthub.gateway.filter.RequestLoggingFilter;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -17,7 +19,9 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -30,6 +34,7 @@ public class GatewayController {
 
     private static final Set<String> EXCLUDED_REQUEST_HEADERS = Set.of("host", "content-length", "connection");
     private static final Set<String> EXCLUDED_RESPONSE_HEADERS = Set.of("transfer-encoding", "connection");
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final RestTemplate restTemplate;
     private final List<Route> routes;
@@ -76,7 +81,7 @@ public class GatewayController {
                 .orElse(null);
 
         if (route == null) {
-            return ResponseEntity.notFound().build();
+            return buildErrorResponse(HttpStatus.NOT_FOUND, "No route configured for this path", path);
         }
 
         String query = request.getQueryString();
@@ -112,11 +117,7 @@ public class GatewayController {
         // up front lets the gateway return that same friendly shape itself instead.
         if (route.maxBodyBytes() != null && body.length > route.maxBodyBytes()) {
             String message = "File is too large — the limit is " + (route.maxBodyBytes() / (1024 * 1024)) + "MB";
-            String json = "{\"status\":413,\"error\":\"Payload Too Large\",\"message\":\"" + message
-                + "\",\"path\":\"" + path + "\"}";
-            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                .body(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return buildErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE, message, path);
         }
 
         HttpEntity<byte[]> entity = new HttpEntity<>(body.length > 0 ? body : null, headers);
@@ -125,7 +126,8 @@ public class GatewayController {
         try {
             response = restTemplate.exchange(targetUri, HttpMethod.valueOf(request.getMethod()), entity, byte[].class);
         } catch (ResourceAccessException e) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+            String message = "The service handling " + route.prefix() + " is currently unavailable — please try again";
+            return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, message, path);
         }
 
         HttpHeaders responseHeaders = new HttpHeaders();
@@ -136,6 +138,28 @@ public class GatewayController {
         });
 
         return new ResponseEntity<>(response.getBody(), responseHeaders, response.getStatusCode());
+    }
+
+    // This controller isn't wired into common-security's GlobalExceptionHandler/ApiError
+    // (the gateway does no auth/validation of its own, just proxies), so its handful of
+    // own error responses build the same {status,error,message,path} JSON shape directly,
+    // via Jackson rather than hand-built string concatenation so any special characters
+    // in the message/path are escaped correctly.
+    private ResponseEntity<byte[]> buildErrorResponse(HttpStatus status, String message, String path) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", status.value());
+        body.put("error", status.getReasonPhrase());
+        body.put("message", message);
+        body.put("path", path);
+        byte[] json;
+        try {
+            json = OBJECT_MAPPER.writeValueAsBytes(body);
+        } catch (JsonProcessingException e) {
+            json = "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+        return ResponseEntity.status(status)
+            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+            .body(json);
     }
 
     private record Route(String prefix, String baseUrl, Long maxBodyBytes) {
