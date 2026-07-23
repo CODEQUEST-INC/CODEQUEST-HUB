@@ -51,12 +51,18 @@ export default function GroupsScreen() {
     setLoading(true);
     setError(null);
     try {
-      const data = await listGroupsByCohort(cohortId, token);
-      if (requestIdRef.current === requestId) setGroups(data);
-      // Payment info is optional — a cohort with no fee configured yet is a
-      // normal state, not an error, so a failure here shouldn't block the list.
-      const statuses = await getCohortPaymentStatuses(cohortId, token).catch(() => []);
-      if (requestIdRef.current === requestId) setPaymentStatuses(statuses);
+      // Groups and payment status are independent — fetch both at once
+      // instead of one after the other.
+      const [data, statuses] = await Promise.all([
+        listGroupsByCohort(cohortId, token),
+        // Payment info is optional — a cohort with no fee configured yet is a
+        // normal state, not an error, so a failure here shouldn't block the list.
+        getCohortPaymentStatuses(cohortId, token).catch(() => []),
+      ]);
+      if (requestIdRef.current === requestId) {
+        setGroups(data);
+        setPaymentStatuses(statuses);
+      }
     } catch (e) {
       if (requestIdRef.current === requestId) {
         setError(e instanceof Error ? e.message : 'Failed to load groups');
