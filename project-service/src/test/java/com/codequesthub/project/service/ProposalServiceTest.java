@@ -12,6 +12,7 @@ import com.codequesthub.project.repository.ProposalRepository;
 import com.codequesthub.project.repository.ProposalVersionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.codequesthub.project.client.NotificationClient;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,14 +37,15 @@ class ProposalServiceTest {
     @Mock private ProposalVersionRepository versionRepo;
     @Mock private GroupMemberRepository memberRepo;
     @Mock private GroupViewRepository groupViewRepo;
+    @Mock private NotificationClient notificationClient;
 
     @TempDir
     Path uploadDir;
 
-    // Method, not a field initializer — MockitoExtension injects @Mock fields
+    // Method, not a field initializer â€” MockitoExtension injects @Mock fields
     // after field initializers would already have run.
     private ProposalService service() {
-        return new ProposalService(proposalRepo, versionRepo, memberRepo, groupViewRepo, uploadDir.toString());
+        return new ProposalService(proposalRepo, versionRepo, memberRepo, groupViewRepo, notificationClient, uploadDir.toString());
     }
 
     private GroupMemberView membershipOf(UUID groupId) {
@@ -310,3 +312,6 @@ class ProposalServiceTest {
             .hasMessageContaining("feedback is required");
     }
 }
+
+
+

@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import com.codequesthub.project.client.NotificationClient;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,23 +24,33 @@ public class ProposalService {
     private final ProposalVersionRepository versionRepo;
     private final GroupMemberRepository memberRepo;
     private final GroupViewRepository groupViewRepo;
+    private final NotificationClient notificationClient;
     private final Path uploadDir;
 
     public ProposalService(ProposalRepository proposalRepo,
                            ProposalVersionRepository versionRepo,
                            GroupMemberRepository memberRepo,
                            GroupViewRepository groupViewRepo,
+                           NotificationClient notificationClient,
                            @Value("${project.upload-dir}") String uploadDir) {
         this.proposalRepo = proposalRepo;
         this.versionRepo = versionRepo;
         this.memberRepo = memberRepo;
         this.groupViewRepo = groupViewRepo;
+        this.notificationClient = notificationClient;
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.uploadDir);
         } catch (IOException e) {
             throw new IllegalStateException("Could not create proposal upload directory: " + uploadDir, e);
         }
+    }
+
+    // Helper: notify every member of a group
+    private void notifyGroup(UUID groupId, String type, String title, String message, UUID relatedEntityId) {
+        memberRepo.findByGroupId(groupId).forEach(member ->
+            notificationClient.send(member.getUserId(), type, title, message, relatedEntityId)
+        );
     }
 
     @Transactional
@@ -74,6 +85,10 @@ public class ProposalService {
         p = proposalRepo.save(p);
 
         saveVersion(p.getId(), 1, req, pdfPath, "submitted", userId, null);
+
+        notifyGroup(groupId, "PROPOSAL_PENDING", "Proposal Submitted",
+            "Your proposal \"" + p.getTitle() + "\" has been submitted and is awaiting review.", p.getId());
+
         return p;
     }
 
@@ -110,6 +125,9 @@ public class ProposalService {
         proposal = proposalRepo.save(proposal);
 
         saveVersion(proposal.getId(), newVersion, req, pdfPath, "submitted", userId, null);
+
+        notifyGroup(proposal.getGroupId(), "PROPOSAL_PENDING", "Proposal Resubmitted",
+            "Your proposal \"" + proposal.getTitle() + "\" has been resubmitted and is awaiting review.", proposal.getId());
 
         if (oldPdfPath != null) {
             deleteFileQuietly(oldPdfPath);
@@ -188,6 +206,15 @@ public class ProposalService {
         snapshot.setObjectives(proposal.getObjectives());
         snapshot.setTechStack(proposal.getTechStack());
         saveVersion(proposal.getId(), newVersion, snapshot, proposal.getPdfPath(), req.getAction(), supervisorId, req.getFeedback());
+
+        if ("approved".equals(req.getAction())) {
+            notifyGroup(proposal.getGroupId(), "PROPOSAL_APPROVED", "Proposal Approved",
+                "Great news! Your proposal \"" + proposal.getTitle() + "\" has been approved.", proposal.getId());
+        } else if ("rejected".equals(req.getAction())) {
+            notifyGroup(proposal.getGroupId(), "PROPOSAL_REJECTED", "Proposal Rejected",
+                "Your proposal \"" + proposal.getTitle() + "\" was rejected. Feedback: " + req.getFeedback(), proposal.getId());
+        }
+
         return proposal;
     }
 
