@@ -316,4 +316,82 @@ class GroupServiceTest {
         assertThat(group.getPhotoPath()).isNull();
         assertThat(java.nio.file.Files.exists(uploadDir.resolve("existing.png"))).isFalse();
     }
+
+    @Test
+    void removeMember_notAMember_badRequest() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(groupWith(groupId, UUID.randomUUID())));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(false);
+
+        assertThatThrownBy(() -> groupService().removeMember(groupId, userId))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("not a member");
+    }
+
+    @Test
+    void removeMember_isCurrentLeader_clearsLeader() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        Group group = groupWith(groupId, UUID.randomUUID());
+        group.setGroupLeaderId(userId);
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(group));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(groupRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Group updated = groupService().removeMember(groupId, userId);
+
+        assertThat(updated.getGroupLeaderId()).isNull();
+    }
+
+    @Test
+    void removeMember_notTheLeader_leavesLeaderUntouched() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
+        Group group = groupWith(groupId, UUID.randomUUID());
+        group.setGroupLeaderId(leaderId);
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(group));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(groupRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Group updated = groupService().removeMember(groupId, userId);
+
+        assertThat(updated.getGroupLeaderId()).isEqualTo(leaderId);
+    }
+
+    @Test
+    void updateSupervisor_groupNotFound_notFound() {
+        UUID groupId = UUID.randomUUID();
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> groupService().updateSupervisor(groupId, UUID.randomUUID()))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("not found");
+    }
+
+    @Test
+    void updateSupervisor_validId_setsSupervisor() {
+        UUID groupId = UUID.randomUUID();
+        UUID newSupervisorId = UUID.randomUUID();
+        Group group = groupWith(groupId, UUID.randomUUID());
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(group));
+        when(groupRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Group updated = groupService().updateSupervisor(groupId, newSupervisorId);
+
+        assertThat(updated.getSupervisorId()).isEqualTo(newSupervisorId);
+    }
+
+    @Test
+    void updateSupervisor_nullId_unassignsSupervisor() {
+        UUID groupId = UUID.randomUUID();
+        Group group = groupWith(groupId, UUID.randomUUID());
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(group));
+        when(groupRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Group updated = groupService().updateSupervisor(groupId, null);
+
+        assertThat(updated.getSupervisorId()).isNull();
+    }
 }

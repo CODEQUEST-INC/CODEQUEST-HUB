@@ -65,6 +65,41 @@ public class GroupService {
         return groupRepo.save(group);
     }
 
+    // Admin-only — reassigning who's on a group or who supervises it is an
+    // organizational decision, not something left to the group's own supervisor.
+    //
+    // @Transactional is required here: deleteByGroupIdAndUserId is a custom
+    // derived delete query, which (unlike JpaRepository's own save/delete)
+    // isn't auto-wrapped in a transaction by Spring Data — without this it
+    // throws TransactionRequiredException at runtime.
+    @Transactional
+    public Group removeMember(UUID groupId, UUID userId) {
+        Group group = groupRepo.findById(groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        if (!memberRepo.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "User is not a member of this group");
+        }
+
+        memberRepo.deleteByGroupIdAndUserId(groupId, userId);
+
+        // Nothing else clears a stale leader reference once the member row is gone.
+        if (userId.equals(group.getGroupLeaderId())) {
+            group.setGroupLeaderId(null);
+        }
+
+        return groupRepo.save(group);
+    }
+
+    public Group updateSupervisor(UUID groupId, UUID supervisorId) {
+        Group group = groupRepo.findById(groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        group.setSupervisorId(supervisorId);
+        return groupRepo.save(group);
+    }
+
     public Group createGroup(CreateGroupRequest req) {
         if (groupRepo.existsByCohortIdAndGroupNumber(req.getCohortId(), req.getGroupNumber())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

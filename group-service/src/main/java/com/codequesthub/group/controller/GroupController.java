@@ -87,6 +87,23 @@ public class GroupController {
         return ResponseEntity.ok(Map.of("data", g));
     }
 
+    // admin only
+    @DeleteMapping("/{groupId}/members/{userId}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> removeMember(@PathVariable UUID groupId, @PathVariable UUID userId) {
+        Group g = groupService.removeMember(groupId, userId);
+        return ResponseEntity.ok(Map.of("data", g));
+    }
+
+    // admin only
+    @PatchMapping("/{groupId}/supervisor")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> updateSupervisor(@PathVariable UUID groupId,
+                                               @RequestBody UpdateSupervisorRequest req) {
+        Group g = groupService.updateSupervisor(groupId, req.getSupervisorId());
+        return ResponseEntity.ok(Map.of("data", g));
+    }
+
     // any member of the group
     @PostMapping(value = "/{groupId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadPhoto(@PathVariable UUID groupId,

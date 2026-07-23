@@ -80,6 +80,25 @@ export function setGroupLeader(groupId: string, userId: string, token: string): 
   });
 }
 
+export function removeGroupMember(groupId: string, userId: string, token: string): Promise<GroupResponse> {
+  return request<GroupResponse>(`/api/groups/${groupId}/members/${userId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export function updateGroupSupervisor(
+  groupId: string,
+  supervisorId: string | null,
+  token: string
+): Promise<GroupResponse> {
+  return request<GroupResponse>(`/api/groups/${groupId}/supervisor`, {
+    method: 'PATCH',
+    body: { supervisorId },
+    token,
+  });
+}
+
 export function resolveGroupPhotoUrl(photoUrl: string | null): string | null {
   return photoUrl ? `${API_BASE_URL}${photoUrl}` : null;
 }

@@ -21,3 +21,7 @@ export function searchUsers(query: string, token: string, role?: string): Promis
   if (role) params.set('role', role);
   return request<UserSearchResult[]>(`/api/auth/users/search?${params.toString()}`, { token });
 }
+
+export function deleteUser(userId: string, token: string): Promise<void> {
+  return request<void>(`/api/auth/users/${userId}`, { method: 'DELETE', token });
+}

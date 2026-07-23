@@ -17,6 +17,8 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, UUID> 
 
     boolean existsByGroupIdAndUserId(UUID groupId, UUID userId);
 
+    void deleteByGroupIdAndUserId(UUID groupId, UUID userId);
+
     @Query("SELECT gm FROM GroupMember gm WHERE gm.userId = :userId")
     Optional<GroupMember> findByUserId(@Param("userId") UUID userId);
 }

@@ -131,6 +131,44 @@ class GroupServiceIntegrationTest {
         assertThat(data.get("groupsCreated")).isEqualTo(2); // groups of 3 -> [3, 2]
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void removeMember_realTransaction_deletesRowAndClearsLeader() {
+        // Regression test: deleteByGroupIdAndUserId is a custom derived delete
+        // query — it threw TransactionRequiredException at runtime (invisible to
+        // Mockito-based unit tests, which never touch a real EntityManager) until
+        // @Transactional was added to GroupService.removeMember. Only a real
+        // persistence layer like this one catches that class of bug.
+        UUID cohortId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        jdbcTemplate.update(
+            "INSERT INTO cohorts (id, name, year) VALUES (?, ?, ?)", cohortId, "Remove Member Cohort", 2026);
+        jdbcTemplate.update(
+            "INSERT INTO users (id, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, 'student')",
+            userId, "Removable Student", "removable-" + userId + "@example.test", "irrelevant-hash");
+        jdbcTemplate.update(
+            "INSERT INTO groups (id, cohort_id, group_number, group_leader_id) VALUES (?, ?, ?, ?)",
+            groupId, cohortId, 9002, userId);
+        jdbcTemplate.update(
+            "INSERT INTO group_members (id, group_id, user_id) VALUES (?, ?, ?)", UUID.randomUUID(), groupId, userId);
+
+        String adminToken = jwtUtil.generateToken(UUID.randomUUID().toString(), "admin@example.test", "admin");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+            "/api/groups/" + groupId + "/members/" + userId, HttpMethod.DELETE, new HttpEntity<>(headers), Map.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        Map<String, Object> data = (Map<String, Object>) response.getBody().get("data");
+        assertThat(data.get("groupLeaderId")).isNull();
+
+        Integer remaining = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM group_members WHERE group_id = ? AND user_id = ?", Integer.class, groupId, userId);
+        assertThat(remaining).isZero();
+    }
+
     private static void applySchema(PostgreSQLContainer<?> container) {
         String[] files = {
             "01_init_auth_and_groups.sql",
