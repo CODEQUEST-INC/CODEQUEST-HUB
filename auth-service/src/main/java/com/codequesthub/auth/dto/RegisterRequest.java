@@ -11,11 +11,15 @@ public class RegisterRequest {
     @NotBlank @Email
     private String email;
 
-    @NotBlank @Size(min = 8, message = "Password must be at least 8 characters")
+    @NotBlank @Size(min = 8, max = 72, message = "Password must be 8-72 characters")
     private String password;
 
     private UserRole role = UserRole.student;
+
+    @Size(max = 50)
     private String studentId;
+
+    @Size(max = 50)
     private String indexNumber;
     private UUID cohortId;
 

@@ -4,7 +4,9 @@ import jakarta.validation.constraints.*;
 
 public class ReviewRequest {
     @NotBlank
-    private String action; // "approved" | "rejected" | "changes_requested"
+    @Pattern(regexp = "approved|rejected|changes_requested",
+        message = "must be one of: approved, rejected, changes_requested")
+    private String action;
 
     @Size(min = 10)
     private String feedback;

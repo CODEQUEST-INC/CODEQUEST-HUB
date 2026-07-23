@@ -1,6 +1,7 @@
 package com.codequesthub.showcase.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class UpsertShowcaseRequest {
@@ -10,10 +11,12 @@ public class UpsertShowcaseRequest {
     private String title;
 
     @NotBlank
+    @Size(max = 5000)
     private String description;
 
     @NotBlank
     @Size(max = 500)
+    @Pattern(regexp = "https://github\\.com/.+", message = "must be a github.com repository URL")
     private String githubUrl;
 
     public String getTitle() { return title; }
