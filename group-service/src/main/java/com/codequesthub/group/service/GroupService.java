@@ -226,6 +226,28 @@ public class GroupService {
         return buildGroupResponse(saved, memberRepo.findByGroupId(groupId));
     }
 
+    // Any member of the group can take down its photo, mirroring uploadPhoto's
+    // membership gate — no leader/supervisor restriction.
+    public Map<String, Object> deletePhoto(UUID groupId, UUID userId) {
+        Group group = groupRepo.findById(groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        if (!memberRepo.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group");
+        }
+
+        String oldPhotoPath = group.getPhotoPath();
+        if (oldPhotoPath == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This group has no photo to remove");
+        }
+
+        group.setPhotoPath(null);
+        Group saved = groupRepo.save(group);
+        deleteFileQuietly(oldPhotoPath);
+
+        return buildGroupResponse(saved, memberRepo.findByGroupId(groupId));
+    }
+
     public byte[] readPhoto(String filename) {
         Path path = uploadDir.resolve(filename).normalize();
         if (!path.startsWith(uploadDir) || !Files.exists(path)) {

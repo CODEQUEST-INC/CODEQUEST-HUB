@@ -270,4 +270,50 @@ class GroupServiceTest {
 
         assertThat((String) result.get("photoUrl")).startsWith("/api/groups/photos/").endsWith(".png");
     }
+
+    @Test
+    void deletePhoto_nonMember_forbidden() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        Group group = groupWith(groupId, UUID.randomUUID());
+        group.setPhotoPath("existing.png");
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(group));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(false);
+
+        assertThatThrownBy(() -> groupService().deletePhoto(groupId, userId))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("not a member");
+    }
+
+    @Test
+    void deletePhoto_noExistingPhoto_badRequest() {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(groupWith(groupId, UUID.randomUUID())));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+
+        assertThatThrownBy(() -> groupService().deletePhoto(groupId, userId))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("no photo to remove");
+    }
+
+    @Test
+    void deletePhoto_validMemberWithPhoto_clearsPathAndDeletesFile() throws Exception {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        Group group = groupWith(groupId, UUID.randomUUID());
+        group.setPhotoPath("existing.png");
+        java.nio.file.Files.write(uploadDir.resolve("existing.png"), new byte[] { 1, 2, 3 });
+
+        when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(group));
+        when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
+        when(memberRepo.findByGroupId(groupId)).thenReturn(java.util.List.of());
+        when(groupRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Map<String, Object> result = groupService().deletePhoto(groupId, userId);
+
+        assertThat(result.get("photoUrl")).isNull();
+        assertThat(group.getPhotoPath()).isNull();
+        assertThat(java.nio.file.Files.exists(uploadDir.resolve("existing.png"))).isFalse();
+    }
 }
