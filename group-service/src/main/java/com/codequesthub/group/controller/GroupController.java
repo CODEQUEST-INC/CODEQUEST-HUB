@@ -96,6 +96,13 @@ public class GroupController {
         return ResponseEntity.ok(Map.of("data", groupService.uploadPhoto(groupId, userId, file)));
     }
 
+    // any member of the group
+    @DeleteMapping("/{groupId}/photo")
+    public ResponseEntity<?> deletePhoto(@PathVariable UUID groupId, Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        return ResponseEntity.ok(Map.of("data", groupService.deletePhoto(groupId, userId)));
+    }
+
     // public — React Native's <Image> can't attach an Authorization header
     @GetMapping("/photos/{filename}")
     public ResponseEntity<byte[]> getPhoto(@PathVariable String filename) {

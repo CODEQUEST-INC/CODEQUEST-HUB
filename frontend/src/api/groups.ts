@@ -117,3 +117,7 @@ export async function uploadGroupPhoto(
   }
   return json?.data as GroupResponse;
 }
+
+export function deleteGroupPhoto(groupId: string, token: string): Promise<GroupResponse> {
+  return request<GroupResponse>(`/api/groups/${groupId}/photo`, { method: 'DELETE', token });
+}

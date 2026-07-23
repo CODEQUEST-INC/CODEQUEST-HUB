@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Linking, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import Text from '../components/Text';
-import { getMyGroup, GroupResponse, resolveGroupPhotoUrl, uploadGroupPhoto } from '../api/groups';
+import { deleteGroupPhoto, getMyGroup, GroupResponse, resolveGroupPhotoUrl, uploadGroupPhoto } from '../api/groups';
 import {
   getFeeConfig,
   getGroupPaymentSummary,
@@ -38,6 +38,7 @@ export default function GroupWorkspaceScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [removingPhoto, setRemovingPhoto] = useState(false);
 
   const [feeConfig, setFeeConfig] = useState<PaymentFeeConfig | null>(null);
   const [myPayment, setMyPayment] = useState<PaymentRecord | null>(null);
@@ -123,6 +124,20 @@ export default function GroupWorkspaceScreen() {
     }
   };
 
+  const onRemovePhoto = async () => {
+    if (!token || !group) return;
+    setError(null);
+    setRemovingPhoto(true);
+    try {
+      const updated = await deleteGroupPhoto(group.id, token);
+      setGroup(updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to remove photo');
+    } finally {
+      setRemovingPhoto(false);
+    }
+  };
+
   const onPayNow = async () => {
     if (!token || !group) return;
     setPaymentError(null);
@@ -187,7 +202,7 @@ export default function GroupWorkspaceScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Pressable style={styles.photoWrap} onPress={onPickPhoto} disabled={uploadingPhoto}>
+        <Pressable style={styles.photoWrap} onPress={onPickPhoto} disabled={uploadingPhoto || removingPhoto}>
           {photo ? (
             <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
           ) : (
@@ -202,6 +217,20 @@ export default function GroupWorkspaceScreen() {
               <Feather name="camera" size={12} color={colors.textOnPrimary} />
             )}
           </View>
+          {photo ? (
+            <Pressable
+              style={styles.photoRemoveBadge}
+              onPress={onRemovePhoto}
+              disabled={removingPhoto || uploadingPhoto}
+              hitSlop={8}
+            >
+              {removingPhoto ? (
+                <ActivityIndicator size="small" color={colors.textOnPrimary} />
+              ) : (
+                <Feather name="x" size={12} color={colors.textOnPrimary} />
+              )}
+            </Pressable>
+          ) : null}
         </Pressable>
         <View style={styles.headerTextWrap}>
           <Text style={styles.title}>{group.name ?? `Group ${group.groupNumber}`}</Text>
@@ -345,6 +374,19 @@ function createStyles(colors: Colors) {
       height: 22,
       borderRadius: radius.pill,
       backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: colors.bg,
+    },
+    photoRemoveBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      width: 20,
+      height: 20,
+      borderRadius: radius.pill,
+      backgroundColor: colors.danger,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
