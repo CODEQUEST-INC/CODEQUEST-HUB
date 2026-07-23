@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -9,8 +10,10 @@ import {
   createGroup,
   GroupResponse,
   listGroupsByCohort,
+  removeGroupMember,
   resolveGroupPhotoUrl,
   setGroupLeader,
+  updateGroupSupervisor,
 } from '../../api/groups';
 import { CohortGroupPaymentSummary, getCohortPaymentStatuses } from '../../api/payments';
 import { UserSearchResult } from '../../api/users';
@@ -40,6 +43,7 @@ export default function GroupsScreen() {
   const [groupSize, setGroupSize] = useState('5');
   const [confirmingAutoGroup, setConfirmingAutoGroup] = useState(false);
   const [autoGrouping, setAutoGrouping] = useState(false);
+  const [editingSupervisorGroupId, setEditingSupervisorGroupId] = useState<string | null>(null);
 
   // Guards against an in-flight request for a since-abandoned cohort
   // resolving after a newer one and clobbering it with stale data.
@@ -160,6 +164,29 @@ export default function GroupsScreen() {
     }
   };
 
+  const onRemoveMember = async (groupId: string, userId: string) => {
+    if (!token) return;
+    setError(null);
+    try {
+      await removeGroupMember(groupId, userId, token);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to remove member');
+    }
+  };
+
+  const onChangeSupervisor = async (groupId: string, supervisorId: string | null) => {
+    if (!token) return;
+    setError(null);
+    try {
+      await updateGroupSupervisor(groupId, supervisorId, token);
+      setEditingSupervisorGroupId(null);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update supervisor');
+    }
+  };
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
@@ -203,10 +230,26 @@ export default function GroupsScreen() {
             </Text>
             {paidGroupIds.has(g.id) ? <PaidBadge status="success" /> : null}
           </View>
-          {g.supervisorId ? (
-            <Text style={styles.cardMeta}>Supervisor: {userLabel(g.supervisorId, names)}</Text>
+          {editingSupervisorGroupId === g.id ? (
+            <View>
+              <UserPicker
+                onSelect={(user) => onChangeSupervisor(g.id, user.id)}
+                roleFilter="supervisor"
+                placeholder="Search supervisors"
+              />
+              <Pressable onPress={() => setEditingSupervisorGroupId(null)}>
+                <Text style={styles.changeLink}>Cancel</Text>
+              </Pressable>
+            </View>
           ) : (
-            <Text style={styles.cardMeta}>No supervisor assigned</Text>
+            <View style={styles.supervisorRow}>
+              <Text style={styles.cardMeta}>
+                {g.supervisorId ? `Supervisor: ${userLabel(g.supervisorId, names)}` : 'No supervisor assigned'}
+              </Text>
+              <Pressable onPress={() => setEditingSupervisorGroupId(g.id)}>
+                <Text style={styles.changeLink}>Change</Text>
+              </Pressable>
+            </View>
           )}
 
           <View style={styles.memberRow}>
@@ -219,6 +262,13 @@ export default function GroupsScreen() {
                   <Text style={styles.memberChipText}>
                     {name} {isLeader ? '★' : ''}
                   </Text>
+                  <Pressable
+                    onPress={() => onRemoveMember(g.id, m.userId)}
+                    hitSlop={8}
+                    style={styles.memberRemoveButton}
+                  >
+                    <Feather name="x" size={12} color={colors.textMuted} />
+                  </Pressable>
                 </Pressable>
               );
             })}
@@ -293,6 +343,8 @@ function createStyles(colors: Colors) {
       paddingHorizontal: spacing.sm,
     },
     memberChipText: { ...typography.caption, color: colors.text },
+    memberRemoveButton: { marginLeft: spacing.xs },
+    supervisorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
     selectedRow: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -6,6 +6,15 @@ import com.codequesthub.auth.dto.UserSummaryResponse;
 import com.codequesthub.auth.entity.User;
 import com.codequesthub.auth.entity.UserRole;
 import com.codequesthub.auth.repository.CohortViewRepository;
+import com.codequesthub.auth.repository.GroupMemberViewRepository;
+import com.codequesthub.auth.repository.GroupViewRepository;
+import com.codequesthub.auth.repository.JudgeViewRepository;
+import com.codequesthub.auth.repository.PaymentRecordViewRepository;
+import com.codequesthub.auth.repository.ProposalVersionViewRepository;
+import com.codequesthub.auth.repository.ProposalViewRepository;
+import com.codequesthub.auth.repository.ScorecardViewRepository;
+import com.codequesthub.auth.repository.ShowcaseEntryViewRepository;
+import com.codequesthub.auth.repository.TaskViewRepository;
 import com.codequesthub.auth.repository.UserRepository;
 import com.codequesthub.common.security.JwtUtil;
 import org.junit.jupiter.api.Test;
@@ -33,20 +42,33 @@ class AuthServiceTest {
 
     @Mock private UserRepository userRepo;
     @Mock private CohortViewRepository cohortViewRepo;
+    @Mock private GroupMemberViewRepository groupMemberViewRepo;
+    @Mock private GroupViewRepository groupViewRepo;
+    @Mock private ProposalViewRepository proposalViewRepo;
+    @Mock private ProposalVersionViewRepository proposalVersionViewRepo;
+    @Mock private TaskViewRepository taskViewRepo;
+    @Mock private ShowcaseEntryViewRepository showcaseEntryViewRepo;
+    @Mock private JudgeViewRepository judgeViewRepo;
+    @Mock private ScorecardViewRepository scorecardViewRepo;
+    @Mock private PaymentRecordViewRepository paymentRecordViewRepo;
     @Mock private PasswordEncoder encoder;
 
     // encoder/jwtUtil aren't exercised by lookupUsers(), and JwtUtil is a concrete
     // class that Mockito's inline mock maker can't instrument on newer JDKs
     // (Byte Buddy support lag) — passing null is fine since these tests never touch it.
     private AuthService authService() {
-        return new AuthService(userRepo, cohortViewRepo, null, null);
+        return new AuthService(userRepo, cohortViewRepo, groupMemberViewRepo, groupViewRepo, proposalViewRepo,
+            proposalVersionViewRepo, taskViewRepo, showcaseEntryViewRepo, judgeViewRepo, scorecardViewRepo,
+            paymentRecordViewRepo, null, null);
     }
 
     // register() calls encoder.encode() and jwtUtil.generateToken() — a real
     // JwtUtil sidesteps the same Byte Buddy limitation since it's constructed
     // directly rather than mocked.
     private AuthService authServiceForRegister() {
-        return new AuthService(userRepo, cohortViewRepo, encoder, new JwtUtil("test-secret-key-32-characters-min", 3600000));
+        return new AuthService(userRepo, cohortViewRepo, groupMemberViewRepo, groupViewRepo, proposalViewRepo,
+            proposalVersionViewRepo, taskViewRepo, showcaseEntryViewRepo, judgeViewRepo, scorecardViewRepo,
+            paymentRecordViewRepo, encoder, new JwtUtil("test-secret-key-32-characters-min", 3600000));
     }
 
     private User userWith(UUID id, String fullName) {
@@ -224,5 +246,61 @@ class AuthServiceTest {
 
         assertThat(result.getUser().getRole()).isEqualTo("supervisor");
         verify(cohortViewRepo, never()).existsById(any());
+    }
+
+    @Test
+    void deleteUser_userNotFound_notFound() {
+        UUID id = UUID.randomUUID();
+        when(userRepo.findById(id)).thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> authService().deleteUser(id, UUID.randomUUID()))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("not found");
+    }
+
+    @Test
+    void deleteUser_selfDelete_badRequest() {
+        UUID id = UUID.randomUUID();
+        when(userRepo.findById(id)).thenReturn(java.util.Optional.of(userWith(id, "Self Deleter")));
+
+        assertThatThrownBy(() -> authService().deleteUser(id, id))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("cannot delete your own account");
+        verify(userRepo, never()).delete(any());
+    }
+
+    @Test
+    void deleteUser_hasGroupMembership_conflictNamesBlocker() {
+        UUID id = UUID.randomUUID();
+        when(userRepo.findById(id)).thenReturn(java.util.Optional.of(userWith(id, "Group Member")));
+        when(groupMemberViewRepo.existsByUserId(id)).thenReturn(true);
+
+        assertThatThrownBy(() -> authService().deleteUser(id, UUID.randomUUID()))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("group membership");
+        verify(userRepo, never()).delete(any());
+    }
+
+    @Test
+    void deleteUser_hasPaymentRecords_conflictNamesBlocker() {
+        UUID id = UUID.randomUUID();
+        when(userRepo.findById(id)).thenReturn(java.util.Optional.of(userWith(id, "Payer")));
+        when(paymentRecordViewRepo.existsByUserId(id)).thenReturn(true);
+
+        assertThatThrownBy(() -> authService().deleteUser(id, UUID.randomUUID()))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("payment records");
+        verify(userRepo, never()).delete(any());
+    }
+
+    @Test
+    void deleteUser_noDependents_deletes() {
+        UUID id = UUID.randomUUID();
+        User user = userWith(id, "Clean Account");
+        when(userRepo.findById(id)).thenReturn(java.util.Optional.of(user));
+
+        authService().deleteUser(id, UUID.randomUUID());
+
+        verify(userRepo).delete(user);
     }
 }

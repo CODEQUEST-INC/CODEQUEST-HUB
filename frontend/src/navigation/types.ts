@@ -49,6 +49,7 @@ export type AdminStackParamList = {
   Judges: undefined;
   Leaderboard: undefined;
   Payments: undefined;
+  Users: undefined;
 };
 
 export type ShowcaseStackParamList = {

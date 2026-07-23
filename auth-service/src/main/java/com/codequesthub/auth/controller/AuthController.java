@@ -87,6 +87,25 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("data", authService.searchUsers(q, roleFilter)));
     }
 
+    // Admin-only — deletes an account outright. Blocks (409) rather than
+    // cascading if the user has any real activity anywhere in the app; see
+    // AuthService.deleteUser for the full rationale.
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable java.util.UUID id,
+                                         @RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+        if (!"admin".equals(claims.get("role", String.class))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "forbidden", "message", "Admin access required"));
+        }
+        java.util.UUID callerId = java.util.UUID.fromString(claims.getSubject());
+        authService.deleteUser(id, callerId);
+        return ResponseEntity.noContent().build();
+    }
+
     private boolean requireValidToken(String authHeader) {
         return authHeader != null && authHeader.startsWith("Bearer ") && jwtUtil.isValid(authHeader.substring(7));
     }
