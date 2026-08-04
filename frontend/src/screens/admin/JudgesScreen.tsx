@@ -1,7 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import Text from '../../components/Text';
+import Button from '../../components/Button';
 import { UserSearchResult } from '../../api/users';
 import { assignJudge, Judge, listJudges, removeJudge } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
@@ -20,6 +21,7 @@ export default function JudgesScreen() {
   const [judges, setJudges] = useState<Judge[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
 
   // Guards against an in-flight request for a since-abandoned cohort
   // resolving after a newer one and clobbering it with stale data.
@@ -63,6 +65,15 @@ export default function JudgesScreen() {
 
   const onRemove = async (judgeAssignmentId: string) => {
     if (!token) return;
+    if (confirmingRemoveId !== judgeAssignmentId) {
+      setConfirmingRemoveId(judgeAssignmentId);
+      setTimeout(
+        () => setConfirmingRemoveId((current) => (current === judgeAssignmentId ? null : current)),
+        4000
+      );
+      return;
+    }
+    setConfirmingRemoveId(null);
     setError(null);
     try {
       await removeJudge(judgeAssignmentId, token);
@@ -85,15 +96,19 @@ export default function JudgesScreen() {
           <Card key={j.id} style={styles.judgeCard}>
             <Avatar name={name} size={32} />
             <Text style={styles.cardTitle}>{name}</Text>
-            <Pressable style={styles.smallDangerButton} onPress={() => onRemove(j.id)}>
-              <Text style={styles.smallDangerButtonText}>Remove</Text>
-            </Pressable>
+            <Button
+              label={confirmingRemoveId === j.id ? 'Tap again to confirm' : 'Remove'}
+              onPress={() => onRemove(j.id)}
+              size="sm"
+              variant="dangerOutline"
+              accessibilityLabel={confirmingRemoveId === j.id ? 'Tap again to confirm remove' : `Remove ${name}`}
+            />
           </Card>
         );
       })}
       {judges.length === 0 && !loading ? <Text style={styles.emptyText}>No judges assigned yet.</Text> : null}
 
-      <Card>
+      <Card style={styles.card}>
         <Text style={styles.cardTitle}>Assign judge</Text>
         <UserPicker onSelect={onAssign} placeholder="Search by name or email" />
       </Card>
@@ -104,16 +119,9 @@ export default function JudgesScreen() {
 function createStyles(colors: Colors) {
   return StyleSheet.create({
     container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
-    judgeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    card: { borderRadius: radius.xxl },
+    judgeCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: radius.xxl },
     cardTitle: { ...typography.body, fontWeight: '600', flex: 1 },
-    smallDangerButton: {
-      borderWidth: 1,
-      borderColor: colors.danger,
-      borderRadius: radius.sm,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-    },
-    smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
     emptyText: { color: colors.textMuted, textAlign: 'center' },
     error: { color: colors.danger },
   });

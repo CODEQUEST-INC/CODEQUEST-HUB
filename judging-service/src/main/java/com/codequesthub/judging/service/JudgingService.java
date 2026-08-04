@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -176,6 +177,7 @@ public class JudgingService {
         for (ScoreEntry entry : req.getScores()) {
             scorecard.getScores().add(new ScorecardScore(scorecard, entry.getCriterionId(), entry.getScore()));
         }
+        scorecard.setComment(req.getComment());
 
         return scorecardRepo.save(scorecard);
     }
@@ -189,10 +191,28 @@ public class JudgingService {
     }
 
     // ============================================================
-    // LEADERBOARD  (admin)
+    // LEADERBOARD
     // ============================================================
 
-    public List<LeaderboardEntry> getLeaderboard(UUID cohortId) {
+    // Admins see live standings always (they need to QA before publishing);
+    // everyone else only sees entries once the cohort has been published.
+    public LeaderboardResponse getLeaderboard(UUID cohortId, boolean isAdmin) {
+        CohortView cohort = cohortViewRepo.findById(cohortId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cohort not found"));
+        boolean published = cohort.getLeaderboardPublishedAt() != null;
+        List<LeaderboardEntry> entries = (isAdmin || published) ? computeLeaderboard(cohortId) : List.of();
+        return new LeaderboardResponse(published, cohort.getLeaderboardPublishedAt(), entries);
+    }
+
+    @Transactional
+    public void publishLeaderboard(UUID cohortId) {
+        CohortView cohort = cohortViewRepo.findById(cohortId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cohort not found"));
+        cohort.setLeaderboardPublishedAt(OffsetDateTime.now());
+        cohortViewRepo.save(cohort);
+    }
+
+    private List<LeaderboardEntry> computeLeaderboard(UUID cohortId) {
         List<GroupView> groups = groupViewRepo.findByCohortId(cohortId);
         if (groups.isEmpty()) return List.of();
 

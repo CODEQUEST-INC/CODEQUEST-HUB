@@ -87,6 +87,20 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("data", authService.searchUsers(q, roleFilter)));
     }
 
+    // Admin-only — headline counts for the admin Users screen.
+    @GetMapping("/users/stats")
+    public ResponseEntity<?> usersStats(@RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+        if (!"admin".equals(claims.get("role", String.class))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "forbidden", "message", "Admin access required"));
+        }
+        return ResponseEntity.ok(Map.of("data", authService.getUsersStats()));
+    }
+
     // Admin-only — deletes an account outright. Blocks (409) rather than
     // cascading if the user has any real activity anywhere in the app; see
     // AuthService.deleteUser for the full rationale.
@@ -103,6 +117,30 @@ public class AuthController {
         }
         java.util.UUID callerId = java.util.UUID.fromString(claims.getSubject());
         authService.deleteUser(id, callerId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // any authenticated user — their own notifications only
+    @GetMapping("/notifications/mine")
+    public ResponseEntity<?> myNotifications(@RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+        return ResponseEntity.ok(Map.of("data", authService.listMyNotifications(userId)));
+    }
+
+    // any authenticated user — must own the notification being marked read
+    @PatchMapping("/notifications/{id}/read")
+    public ResponseEntity<?> markNotificationRead(@PathVariable java.util.UUID id,
+                                                   @RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+        authService.markNotificationRead(id, userId);
         return ResponseEntity.noContent().build();
     }
 

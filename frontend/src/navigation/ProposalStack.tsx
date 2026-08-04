@@ -1,7 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import ProposalFormScreen from '../screens/proposal/ProposalFormScreen';
-import ProposalHistoryScreen from '../screens/proposal/ProposalHistoryScreen';
 import ProposalStatusScreen from '../screens/proposal/ProposalStatusScreen';
 import { useTheme } from '../theme';
 import { headerProfileButton } from './headerProfileButton';
@@ -21,7 +20,6 @@ export default function ProposalStack() {
     >
       <Stack.Screen name="ProposalStatus" component={ProposalStatusScreen} options={{ title: 'My Proposal' }} />
       <Stack.Screen name="ProposalForm" component={ProposalFormScreen} options={{ title: 'Proposal' }} />
-      <Stack.Screen name="ProposalHistory" component={ProposalHistoryScreen} options={{ title: 'History' }} />
     </Stack.Navigator>
   );
 }

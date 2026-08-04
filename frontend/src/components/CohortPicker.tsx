@@ -7,27 +7,37 @@ import { Colors, radius, spacing, useTheme } from '../theme';
 
 interface Props {
   selectedCohortId: string | null;
-  onSelect: (cohortId: string) => void;
+  onSelect: (cohortId: string | null) => void;
+  // Overrides the picker's own fetch — pass this when the caller already has
+  // a (possibly filtered) cohort list, e.g. Showcase only wants cohorts that
+  // have published entries.
+  cohorts?: Cohort[];
+  // Adds an "All cohorts" chip that selects null, and disables the
+  // auto-select-first-cohort behavior below (that default only makes sense
+  // when there's no "all" option to fall back to).
+  allowAll?: boolean;
 }
 
-export default function CohortPicker({ selectedCohortId, onSelect }: Props) {
+export default function CohortPicker({ selectedCohortId, onSelect, cohorts: cohortsOverride, allowAll = false }: Props) {
   const { token } = useAuth();
   const { colors } = useTheme();
   const styles = createStyles(colors);
-  const [cohorts, setCohorts] = useState<Cohort[]>([]);
+  const [fetchedCohorts, setFetchedCohorts] = useState<Cohort[]>([]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || cohortsOverride) return;
     listCohorts(token)
       .then((list) => {
-        setCohorts(list);
-        if (!selectedCohortId && list.length > 0) {
+        setFetchedCohorts(list);
+        if (!allowAll && !selectedCohortId && list.length > 0) {
           onSelect(list[0].id);
         }
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, cohortsOverride]);
+
+  const cohorts = cohortsOverride ?? fetchedCohorts;
 
   if (cohorts.length === 0) {
     return (
@@ -39,6 +49,16 @@ export default function CohortPicker({ selectedCohortId, onSelect }: Props) {
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+      {allowAll ? (
+        <Pressable
+          style={[styles.chip, !selectedCohortId && styles.chipSelected]}
+          onPress={() => onSelect(null)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: !selectedCohortId }}
+        >
+          <Text style={[styles.chipText, !selectedCohortId && styles.chipTextSelected]}>All cohorts</Text>
+        </Pressable>
+      ) : null}
       {cohorts.map((c) => (
         <Pressable
           key={c.id}
@@ -58,6 +78,8 @@ function createStyles(colors: Colors) {
   return StyleSheet.create({
     row: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.sm },
     chip: {
+      minHeight: 44,
+      justifyContent: 'center',
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.pill,

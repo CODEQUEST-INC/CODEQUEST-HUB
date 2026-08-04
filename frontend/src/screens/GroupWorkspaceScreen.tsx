@@ -19,6 +19,7 @@ import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useUserNames, userLabel } from '../hooks/useUserNames';
 import Avatar from '../components/Avatar';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import PaidBadge from '../components/PaidBadge';
@@ -202,7 +203,13 @@ export default function GroupWorkspaceScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Pressable style={styles.photoWrap} onPress={onPickPhoto} disabled={uploadingPhoto || removingPhoto}>
+        <Pressable
+          style={({ pressed }) => [styles.photoWrap, pressed && styles.photoWrapPressed]}
+          onPress={onPickPhoto}
+          disabled={uploadingPhoto || removingPhoto}
+          accessibilityRole="button"
+          accessibilityLabel={photo ? 'Change group photo' : 'Add group photo'}
+        >
           {photo ? (
             <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
           ) : (
@@ -222,7 +229,9 @@ export default function GroupWorkspaceScreen() {
               style={styles.photoRemoveBadge}
               onPress={onRemovePhoto}
               disabled={removingPhoto || uploadingPhoto}
-              hitSlop={8}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Remove group photo"
             >
               {removingPhoto ? (
                 <ActivityIndicator size="small" color={colors.textOnPrimary} />
@@ -238,15 +247,26 @@ export default function GroupWorkspaceScreen() {
         </View>
       </View>
 
-      {group.groupLeaderId ? (
-        <Text style={styles.meta}>Leader: {userLabel(group.groupLeaderId, names)}</Text>
-      ) : null}
-      {group.supervisorId ? (
-        <Text style={styles.meta}>Supervisor: {userLabel(group.supervisorId, names)}</Text>
+      {group.groupLeaderId || group.supervisorId ? (
+        <Card style={styles.infoCard}>
+          {group.groupLeaderId ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Leader</Text>
+              <Text style={styles.infoValue}>{userLabel(group.groupLeaderId, names)}</Text>
+            </View>
+          ) : null}
+          {group.groupLeaderId && group.supervisorId ? <View style={styles.infoDivider} /> : null}
+          {group.supervisorId ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Supervisor</Text>
+              <Text style={styles.infoValue}>{userLabel(group.supervisorId, names)}</Text>
+            </View>
+          ) : null}
+        </Card>
       ) : null}
 
       {feeConfig ? (
-        <Card style={styles.paymentCard} tint={colors.accents.pink}>
+        <Card style={[styles.paymentCard, styles.bigRadius]} tint={colors.accents.pink}>
           <View style={styles.paymentHeaderRow}>
             <Text style={styles.cardTitle}>My registration fee</Text>
             <PaidBadge status={myPayment?.status ?? 'unpaid'} />
@@ -262,8 +282,15 @@ export default function GroupWorkspaceScreen() {
                 {SHIRT_SIZES.map((size) => (
                   <Pressable
                     key={size}
-                    style={[styles.shirtChip, shirtSize === size && styles.shirtChipSelected]}
+                    style={({ pressed }) => [
+                      styles.shirtChip,
+                      shirtSize === size && styles.shirtChipSelected,
+                      pressed && styles.shirtChipPressed,
+                    ]}
                     onPress={() => setShirtSize(size)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: shirtSize === size }}
+                    accessibilityLabel={`Shirt size ${size}`}
                   >
                     <Text style={[styles.shirtChipText, shirtSize === size && styles.shirtChipTextSelected]}>
                       {size}
@@ -272,22 +299,20 @@ export default function GroupWorkspaceScreen() {
                 ))}
               </View>
 
-              <Pressable style={styles.payButton} onPress={onPayNow} disabled={payingLoading}>
-                {payingLoading ? (
-                  <ActivityIndicator color={colors.textOnPrimary} />
-                ) : (
-                  <Text style={styles.payButtonText}>Pay now</Text>
-                )}
-              </Pressable>
+              <Button label="Pay now" onPress={onPayNow} loading={payingLoading} icon="credit-card" style={styles.payButton} />
 
               {myPayment?.status === 'pending' ? (
-                <Pressable style={styles.verifyButton} onPress={onVerifyPayment} disabled={verifyingLoading}>
-                  {verifyingLoading ? (
-                    <ActivityIndicator color={colors.primary} />
-                  ) : (
-                    <Text style={styles.verifyButtonText}>I've paid — verify</Text>
-                  )}
-                </Pressable>
+                <>
+                  <Text style={styles.hint}>
+                    Complete payment in the browser, then come back here and tap verify.
+                  </Text>
+                  <Button
+                    label="I've paid — verify"
+                    onPress={onVerifyPayment}
+                    loading={verifyingLoading}
+                    variant="secondary"
+                  />
+                </>
               ) : null}
             </>
           ) : null}
@@ -296,10 +321,16 @@ export default function GroupWorkspaceScreen() {
 
       {feeConfig && paymentSummary ? (
         <Card
-          style={styles.paymentCard}
+          style={[styles.paymentCard, styles.bigRadius]}
           tint={paymentSummary.allPaid ? colors.accents.green : colors.accents.amber}
         >
-          <Pressable style={styles.paymentHeaderRow} onPress={() => setMembersExpanded((prev) => !prev)}>
+          <Pressable
+            style={({ pressed }) => [styles.paymentHeaderRow, styles.expandRow, pressed && styles.expandRowPressed]}
+            onPress={() => setMembersExpanded((prev) => !prev)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: membersExpanded }}
+            accessibilityLabel={membersExpanded ? 'Collapse member payment list' : 'Expand member payment list'}
+          >
             <Text style={styles.cardTitle}>Group payment status</Text>
             <View style={styles.memberPaymentRight}>
               <Text style={styles.cardMeta}>
@@ -344,7 +375,7 @@ export default function GroupWorkspaceScreen() {
           const isLeader = item.userId === group.groupLeaderId;
           return (
             <View style={styles.memberRow}>
-              <Avatar name={name} size={36} />
+              <Avatar name={name} size={40} />
               <View style={styles.memberTextWrap}>
                 <Text style={styles.memberText}>{name}</Text>
                 {isLeader ? <Text style={styles.leaderLabel}>Group leader</Text> : null}
@@ -364,7 +395,8 @@ function createStyles(colors: Colors) {
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
     headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     photoWrap: { position: 'relative' },
-    photo: { width: 64, height: 64, borderRadius: radius.md },
+    photoWrapPressed: { opacity: 0.85 },
+    photo: { width: 64, height: 64, borderRadius: radius.xxl },
     photoPlaceholder: { backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
     photoEditBadge: {
       position: 'absolute',
@@ -393,17 +425,29 @@ function createStyles(colors: Colors) {
       borderColor: colors.bg,
     },
     headerTextWrap: { flex: 1 },
-    title: { ...typography.heading, fontSize: 20 },
+    title: { ...typography.heading, fontSize: 24 },
     subtitle: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
     meta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+    infoCard: { marginTop: spacing.lg, gap: 0 },
+    infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs },
+    infoLabel: { ...typography.body, color: colors.textMuted },
+    infoValue: { ...typography.body, fontWeight: '700' },
+    infoDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
     sectionHeading: { ...typography.subheading, marginTop: spacing.xl, marginBottom: spacing.sm },
     paymentCard: { marginTop: spacing.lg, gap: spacing.sm },
+    bigRadius: { borderRadius: radius.xxl },
     paymentHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    expandRow: { minHeight: 44 },
+    expandRowPressed: { opacity: 0.7 },
     cardTitle: { ...typography.body, fontWeight: '600' },
     cardMeta: { ...typography.caption, color: colors.textMuted },
     hint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
     shirtRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
     shirtChip: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.pill,
@@ -411,24 +455,10 @@ function createStyles(colors: Colors) {
       paddingHorizontal: spacing.md,
     },
     shirtChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    shirtChipPressed: { opacity: 0.8 },
     shirtChipText: { ...typography.caption, color: colors.text, fontWeight: '600' },
     shirtChipTextSelected: { color: colors.textOnPrimary },
-    payButton: {
-      backgroundColor: colors.primary,
-      borderRadius: radius.md,
-      padding: spacing.md,
-      alignItems: 'center',
-      marginTop: spacing.xs,
-    },
-    payButtonText: { color: colors.textOnPrimary, fontWeight: '600' },
-    verifyButton: {
-      borderWidth: 1,
-      borderColor: colors.primary,
-      borderRadius: radius.md,
-      padding: spacing.md,
-      alignItems: 'center',
-    },
-    verifyButtonText: { color: colors.primary, fontWeight: '600' },
+    payButton: { marginTop: spacing.xs },
     allPaidBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
     allPaidText: { ...typography.body, fontWeight: '600' },
     memberPaymentRow: {

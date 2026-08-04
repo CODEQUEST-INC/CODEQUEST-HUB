@@ -26,6 +26,9 @@ public class Scorecard {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String comment;
+
     @OneToMany(mappedBy = "scorecard", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ScorecardScore> scores = new ArrayList<>();
 
@@ -42,5 +45,7 @@ public class Scorecard {
     public void setJudgeId(UUID v) { this.judgeId = v; }
     public OffsetDateTime getSubmittedAt() { return submittedAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
+    public String getComment() { return comment; }
+    public void setComment(String v) { this.comment = v; }
     public List<ScorecardScore> getScores() { return scores; }
 }

@@ -1,17 +1,21 @@
 import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as DocumentPicker from 'expo-document-picker';
-import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
+import Button from '../../components/Button';
 import { ApiError } from '../../api/client';
 import { ProposalContentRequest, ProposalPdfFile, resubmitProposal, submitProposal } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import { ProposalStackParamList } from '../../navigation/types';
 import { Colors, radius, spacing, useTheme } from '../../theme';
+import { confirmAction } from '../../utils/confirm';
 
 type Props = NativeStackScreenProps<ProposalStackParamList, 'ProposalForm'>;
+
+const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
 export default function ProposalFormScreen({ route, navigation }: Props) {
   const { token } = useAuth();
@@ -27,11 +31,38 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
   const [pdfFile, setPdfFile] = useState<ProposalPdfFile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const leavingIntentionally = useRef(false);
+
+  // Guard against accidentally losing a half-written proposal to a stray
+  // back-swipe or hardware back press — a full autosave-to-disk would need a
+  // new storage dependency we can't verify builds correctly in this pass, so
+  // this is the safe interim mitigation.
+  useEffect(() => {
+    const hasContent = Boolean(
+      title.trim() || problemStatement.trim() || objectives.trim() || techStack.trim() || pdfFile
+    );
+    return navigation.addListener('beforeRemove', (e) => {
+      if (!hasContent || leavingIntentionally.current) return;
+      e.preventDefault();
+      confirmAction({
+        title: 'Discard proposal draft?',
+        message: 'You have unsaved changes. Leaving now will lose them.',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep editing',
+        onConfirm: () => navigation.dispatch(e.data.action),
+      });
+    });
+  }, [navigation, title, problemStatement, objectives, techStack, pdfFile]);
 
   const onPickPdf = async () => {
     const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf' });
     if (result.canceled || result.assets.length === 0) return;
     const asset = result.assets[0];
+    if (asset.size && asset.size > MAX_PDF_BYTES) {
+      setError('PDF must be smaller than 10MB.');
+      return;
+    }
+    setError(null);
     setPdfFile({ uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'application/pdf' });
   };
 
@@ -50,6 +81,7 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
       } else {
         await submitProposal(req, pdfFile, token);
       }
+      leavingIntentionally.current = true;
       navigation.navigate('ProposalStatus');
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
@@ -101,9 +133,15 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
         placeholder="e.g. React Native, Spring Boot, Postgres"
         placeholderTextColor={colors.textMuted}
       />
+      <Text style={styles.helperText}>Comma-separated list of languages, frameworks, and tools</Text>
 
       <Text style={styles.label}>PDF attachment</Text>
-      <Pressable style={styles.pdfPicker} onPress={onPickPdf}>
+      <Pressable
+        style={({ pressed }) => [styles.pdfPicker, pressed && styles.pdfPickerPressed]}
+        onPress={onPickPdf}
+        accessibilityRole="button"
+        accessibilityLabel={pdfFile ? `Change PDF attachment, currently ${pdfFile.name}` : 'Select a PDF, required'}
+      >
         <Feather name={pdfFile ? 'file-text' : 'upload'} size={16} color={colors.primary} />
         <Text style={styles.pdfPickerText} numberOfLines={1}>
           {pdfFile ? pdfFile.name : 'Select a PDF (required)'}
@@ -113,13 +151,22 @@ export default function ProposalFormScreen({ route, navigation }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
-        {submitting ? (
-          <ActivityIndicator color={colors.textOnPrimary} />
-        ) : (
-          <Text style={styles.buttonText}>{mode === 'resubmit' ? 'Resubmit' : 'Submit proposal'}</Text>
-        )}
-      </Pressable>
+      <Button
+        label={mode === 'resubmit' ? 'Resubmit' : 'Submit proposal'}
+        onPress={onSubmit}
+        loading={submitting}
+        style={[
+          styles.button,
+          {
+            borderRadius: radius.xxxl,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.3,
+            shadowRadius: 14,
+            elevation: 6,
+          },
+        ]}
+      />
     </ScrollView>
   );
 }
@@ -131,32 +178,28 @@ function createStyles(colors: Colors) {
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.md,
+      borderRadius: radius.xl,
       padding: spacing.md,
       fontSize: 16,
       backgroundColor: colors.surface,
     },
     multiline: { minHeight: 90, textAlignVertical: 'top' },
+    helperText: { fontSize: 12, color: colors.textMuted, marginTop: -spacing.xs },
     pdfPicker: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
+      minHeight: 44,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.md,
+      borderRadius: radius.xl,
       padding: spacing.md,
       backgroundColor: colors.surface,
     },
+    pdfPickerPressed: { opacity: 0.8 },
     pdfPickerText: { flex: 1, color: colors.text },
     pdfChangeLink: { color: colors.primary, fontWeight: '600', fontSize: 13 },
-    button: {
-      backgroundColor: colors.primary,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      alignItems: 'center',
-      marginTop: spacing.sm,
-    },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    button: { marginTop: spacing.sm },
     error: { color: colors.danger },
   });
 }

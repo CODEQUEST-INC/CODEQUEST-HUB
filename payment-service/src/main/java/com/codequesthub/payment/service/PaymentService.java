@@ -4,6 +4,7 @@ import com.codequesthub.payment.dto.CohortGroupPaymentSummary;
 import com.codequesthub.payment.dto.GroupPaymentSummary;
 import com.codequesthub.payment.dto.InitializePaymentResponse;
 import com.codequesthub.payment.dto.MemberPaymentStatus;
+import com.codequesthub.payment.dto.PaymentSummaryResponse;
 import com.codequesthub.payment.entity.*;
 import com.codequesthub.payment.repository.*;
 import jakarta.transaction.Transactional;
@@ -35,6 +36,8 @@ public class PaymentService {
     private final GroupMemberRepository memberRepo;
     private final GroupViewRepository groupViewRepo;
     private final UserViewRepository userViewRepo;
+    private final NotificationViewRepository notificationViewRepo;
+    private final EmailService emailService;
     private final RestTemplate restTemplate;
     private final String paystackSecretKey;
     private final String paystackBaseUrl;
@@ -44,6 +47,8 @@ public class PaymentService {
                           GroupMemberRepository memberRepo,
                           GroupViewRepository groupViewRepo,
                           UserViewRepository userViewRepo,
+                          NotificationViewRepository notificationViewRepo,
+                          EmailService emailService,
                           RestTemplate restTemplate,
                           @Value("${paystack.secret-key}") String paystackSecretKey,
                           @Value("${paystack.base-url}") String paystackBaseUrl) {
@@ -52,6 +57,8 @@ public class PaymentService {
         this.memberRepo = memberRepo;
         this.groupViewRepo = groupViewRepo;
         this.userViewRepo = userViewRepo;
+        this.notificationViewRepo = notificationViewRepo;
+        this.emailService = emailService;
         this.restTemplate = restTemplate;
         this.paystackSecretKey = paystackSecretKey;
         this.paystackBaseUrl = paystackBaseUrl;
@@ -175,6 +182,14 @@ public class PaymentService {
         return recordRepo.findTopByGroupIdAndUserIdOrderByCreatedAtDesc(groupId, userId);
     }
 
+    // The calling student's full payment attempt history for this group, newest first.
+    public List<PaymentRecord> getMyPaymentHistory(UUID groupId, UUID userId) {
+        if (!memberRepo.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a member of this group");
+        }
+        return recordRepo.findByGroupIdAndUserIdOrderByCreatedAtDesc(groupId, userId);
+    }
+
     // Per-member breakdown for a single group — any member, the group's supervisor, or admin.
     public GroupPaymentSummary getGroupPaymentSummary(UUID groupId, UUID userId, String role) {
         checkCanView(groupId, userId, role);
@@ -212,6 +227,35 @@ public class PaymentService {
             .toList();
     }
 
+    // Sitewide across every cohort that has a fee configured — cohorts with no
+    // fee configured contribute nothing (there's no expected amount to compare against).
+    public PaymentSummaryResponse getAdminSummary() {
+        long collectedTotal = 0;
+        long expectedTotal = 0;
+        int outstanding = 0;
+
+        for (PaymentFeeConfig config : feeConfigRepo.findAll()) {
+            List<GroupView> groups = groupViewRepo.findByCohortId(config.getCohortId());
+            List<UUID> groupIds = groups.stream().map(GroupView::getId).toList();
+            if (groupIds.isEmpty()) continue;
+
+            List<GroupMemberView> members = memberRepo.findByGroupIdIn(groupIds);
+            Map<UUID, PaymentRecord> latestByUser = latestRecordByUser(recordRepo.findByGroupIdInOrderByCreatedAtDesc(groupIds));
+
+            expectedTotal += (long) config.getAmountPesewas() * members.size();
+            for (GroupMemberView member : members) {
+                PaymentRecord record = latestByUser.get(member.getUserId());
+                if (record != null && record.getStatus() == PaymentStatus.success) {
+                    collectedTotal += record.getAmountPesewas();
+                } else {
+                    outstanding++;
+                }
+            }
+        }
+
+        return new PaymentSummaryResponse(collectedTotal, expectedTotal, outstanding);
+    }
+
     private Map<UUID, PaymentRecord> latestRecordByUser(List<PaymentRecord> recordsNewestFirst) {
         Map<UUID, PaymentRecord> latestByUser = new HashMap<>();
         for (PaymentRecord record : recordsNewestFirst) {
@@ -235,6 +279,41 @@ public class PaymentService {
         boolean allPaid = !memberStatuses.isEmpty() && paidCount == memberStatuses.size();
 
         return new GroupPaymentSummary(groupId, memberStatuses.size(), paidCount, allPaid, memberStatuses);
+    }
+
+    // Notifies every member who hasn't paid yet — in-app always, email via the
+    // stubbed EmailService until SMTP credentials are configured. Returns how
+    // many members were reminded.
+    @Transactional
+    public int remindUnpaidMembers(UUID groupId) {
+        GroupView group = groupViewRepo.findById(groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        PaymentFeeConfig config = getFeeConfig(group.getCohortId());
+        List<GroupMemberView> members = memberRepo.findByGroupId(groupId);
+        Map<UUID, PaymentRecord> latestByUser = latestRecordByUser(recordRepo.findByGroupIdOrderByCreatedAtDesc(groupId));
+
+        String amount = config.getCurrency() + " " + String.format("%.2f", config.getAmountPesewas() / 100.0);
+        String title = "Payment reminder";
+        String body = "Your " + amount + " fee for " + group.getName() + " hasn't been paid yet.";
+
+        int remindedCount = 0;
+        for (GroupMemberView member : members) {
+            PaymentRecord record = latestByUser.get(member.getUserId());
+            if (record != null && record.getStatus() == PaymentStatus.success) continue;
+
+            NotificationView notification = new NotificationView();
+            notification.setUserId(member.getUserId());
+            notification.setType("payment_reminder");
+            notification.setTitle(title);
+            notification.setBody(body);
+            notificationViewRepo.save(notification);
+
+            userViewRepo.findById(member.getUserId())
+                .ifPresent(u -> emailService.sendPaymentReminder(u.getEmail(), title, body));
+
+            remindedCount++;
+        }
+        return remindedCount;
     }
 
     private void checkCanView(UUID groupId, UUID userId, String role) {

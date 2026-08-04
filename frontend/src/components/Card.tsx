@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { AccentSwatch, Colors, radius, spacing, useTheme } from '../theme';
+import { AccentSwatch, Colors, elevation, radius, spacing, useTheme } from '../theme';
 
 interface CardProps {
   children: React.ReactNode;
@@ -9,8 +9,8 @@ interface CardProps {
 }
 
 export default function Card({ children, tint, style }: CardProps) {
-  const { colors } = useTheme();
-  const styles = createStyles(colors);
+  const { mode, colors } = useTheme();
+  const styles = createStyles(colors, mode);
   return (
     <View style={[styles.card, tint ? { borderLeftColor: tint.accent, borderLeftWidth: 3 } : null, style]}>
       {children}
@@ -18,7 +18,7 @@ export default function Card({ children, tint, style }: CardProps) {
   );
 }
 
-function createStyles(colors: Colors) {
+function createStyles(colors: Colors, mode: 'light' | 'dark') {
   return StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
@@ -27,6 +27,7 @@ function createStyles(colors: Colors) {
       borderColor: colors.border,
       padding: spacing.lg,
       gap: spacing.xs,
+      ...elevation(mode, 'sm'),
     },
   });
 }

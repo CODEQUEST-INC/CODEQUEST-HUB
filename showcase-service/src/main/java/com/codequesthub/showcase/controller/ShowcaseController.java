@@ -51,6 +51,14 @@ public class ShowcaseController {
         return ResponseEntity.ok(Map.of("data", entry));
     }
 
+    // any group member — swaps this photo into the cover (position 0) slot
+    @PatchMapping("/{groupId}/photo/{photoId}/cover")
+    public ResponseEntity<?> setCoverPhoto(@PathVariable UUID groupId, @PathVariable UUID photoId, Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        ShowcaseEntryResponse entry = showcaseService.setCoverPhoto(groupId, userId, photoId);
+        return ResponseEntity.ok(Map.of("data", entry));
+    }
+
     // any group member
     @DeleteMapping("/{groupId}/photo/{photoId}")
     public ResponseEntity<?> deletePhoto(@PathVariable UUID groupId, @PathVariable UUID photoId, Authentication auth) {

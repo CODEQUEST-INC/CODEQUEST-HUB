@@ -222,6 +222,12 @@ public class ProposalService {
         return proposalRepo.findBySupervisorId(supervisorId);
     }
 
+    // Sitewide count of proposals awaiting a supervisor's review — backs the
+    // Admin Hub's overview card.
+    public long getPendingReviewCount() {
+        return proposalRepo.countByStatusIn(List.of(ProposalStatus.submitted, ProposalStatus.under_review));
+    }
+
     // Required at submit/resubmit time — enforced here rather than a DB
     // constraint so proposals that predate this feature don't fail schema
     // validation.

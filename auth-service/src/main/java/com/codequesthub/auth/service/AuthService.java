@@ -1,12 +1,14 @@
 package com.codequesthub.auth.service;
 
 import com.codequesthub.auth.dto.*;
+import com.codequesthub.auth.entity.Notification;
 import com.codequesthub.auth.entity.User;
 import com.codequesthub.auth.entity.UserRole;
 import com.codequesthub.auth.repository.CohortViewRepository;
 import com.codequesthub.auth.repository.GroupMemberViewRepository;
 import com.codequesthub.auth.repository.GroupViewRepository;
 import com.codequesthub.auth.repository.JudgeViewRepository;
+import com.codequesthub.auth.repository.NotificationRepository;
 import com.codequesthub.auth.repository.PaymentRecordViewRepository;
 import com.codequesthub.auth.repository.ProposalVersionViewRepository;
 import com.codequesthub.auth.repository.ProposalViewRepository;
@@ -20,6 +22,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -35,6 +41,7 @@ public class AuthService {
     private final JudgeViewRepository judgeViewRepo;
     private final ScorecardViewRepository scorecardViewRepo;
     private final PaymentRecordViewRepository paymentRecordViewRepo;
+    private final NotificationRepository notificationRepo;
     private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
 
@@ -43,7 +50,7 @@ public class AuthService {
                        ProposalViewRepository proposalViewRepo, ProposalVersionViewRepository proposalVersionViewRepo,
                        TaskViewRepository taskViewRepo, ShowcaseEntryViewRepository showcaseEntryViewRepo,
                        JudgeViewRepository judgeViewRepo, ScorecardViewRepository scorecardViewRepo,
-                       PaymentRecordViewRepository paymentRecordViewRepo,
+                       PaymentRecordViewRepository paymentRecordViewRepo, NotificationRepository notificationRepo,
                        PasswordEncoder encoder, JwtUtil jwtUtil) {
         this.userRepo = userRepo;
         this.cohortViewRepo = cohortViewRepo;
@@ -56,6 +63,7 @@ public class AuthService {
         this.judgeViewRepo = judgeViewRepo;
         this.scorecardViewRepo = scorecardViewRepo;
         this.paymentRecordViewRepo = paymentRecordViewRepo;
+        this.notificationRepo = notificationRepo;
         this.encoder = encoder;
         this.jwtUtil = jwtUtil;
     }
@@ -189,5 +197,33 @@ public class AuthService {
         }
 
         userRepo.delete(user);
+    }
+
+    public UsersStatsResponse getUsersStats() {
+        return new UsersStatsResponse(
+            userRepo.count(),
+            userRepo.countByRole(UserRole.student),
+            userRepo.countByRole(UserRole.supervisor),
+            userRepo.countByRole(UserRole.admin),
+            userRepo.countByRole(UserRole.mentor),
+            groupViewRepo.count(),
+            groupViewRepo.countBySupervisorIdIsNull(),
+            judgeViewRepo.count());
+    }
+
+    public List<Notification> listMyNotifications(UUID userId) {
+        return notificationRepo.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    public void markNotificationRead(UUID notificationId, UUID userId) {
+        Notification notification = notificationRepo.findById(notificationId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));
+        if (!notification.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This notification does not belong to you");
+        }
+        if (notification.getReadAt() == null) {
+            notification.setReadAt(OffsetDateTime.now());
+            notificationRepo.save(notification);
+        }
     }
 }

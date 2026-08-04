@@ -1,14 +1,15 @@
-import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Linking, ScrollView, StyleSheet } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
 import { resolveProposalPdfUrl, reviewProposal, ReviewAction } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
+import Button from '../../components/Button';
 import StatusBadge from '../../components/StatusBadge';
 import { SupervisorStackParamList } from '../../navigation/types';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
+import { confirmAction } from '../../utils/confirm';
 
 type Props = NativeStackScreenProps<SupervisorStackParamList, 'ReviewDetail'>;
 
@@ -22,9 +23,26 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submittingAction, setSubmittingAction] = useState<ReviewAction | null>(null);
+  const leavingIntentionally = useRef(false);
 
   const canReview = proposal.status === 'submitted' || proposal.status === 'under_review';
   const feedbackTooShort = feedback.trim().length < FEEDBACK_MIN_LENGTH;
+
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (e) => {
+        if (!feedback.trim() || leavingIntentionally.current) return;
+        e.preventDefault();
+        confirmAction({
+          title: 'Discard feedback?',
+          message: "You've written feedback that hasn't been submitted yet.",
+          confirmLabel: 'Discard',
+          cancelLabel: 'Keep editing',
+          onConfirm: () => navigation.dispatch(e.data.action),
+        });
+      }),
+    [navigation, feedback]
+  );
 
   const act = async (action: ReviewAction) => {
     if (action !== 'approved' && feedbackTooShort) {
@@ -36,6 +54,7 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
     try {
       const updated = await reviewProposal(proposal.id, { action, feedback: feedback.trim() || undefined }, token!);
       setProposal(updated);
+      leavingIntentionally.current = true;
       navigation.goBack();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to submit review');
@@ -59,13 +78,16 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
       <Text style={styles.body}>{proposal.techStack}</Text>
 
       {proposal.pdfUrl ? (
-        <Pressable
+        <Button
+          label="View PDF attachment"
+          icon="file-text"
+          variant="secondary"
           style={styles.pdfButton}
-          onPress={() => Linking.openURL(resolveProposalPdfUrl(proposal.pdfUrl)!)}
-        >
-          <Feather name="file-text" size={15} color={colors.primary} />
-          <Text style={styles.pdfButtonText}>View PDF attachment</Text>
-        </Pressable>
+          onPress={() => {
+            const url = resolveProposalPdfUrl(proposal.pdfUrl)!;
+            Linking.openURL(url).catch(() => setError('Could not open the PDF attachment.'));
+          }}
+        />
       ) : null}
 
       {canReview ? (
@@ -80,35 +102,43 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
             placeholder="Explain what needs to change..."
             placeholderTextColor={colors.textMuted}
             multiline
+            accessibilityLabel="Feedback"
           />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Pressable style={styles.approveButton} onPress={() => act('approved')} disabled={!!submittingAction}>
-            {submittingAction === 'approved' ? (
-              <ActivityIndicator color={colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.buttonText}>Approve</Text>
-            )}
-          </Pressable>
-          <Pressable
+          <Button
+            label="Approve"
+            icon="check-circle"
+            variant="accentGreen"
+            style={styles.approveButton}
+            onPress={() => act('approved')}
+            disabled={!!submittingAction}
+            loading={submittingAction === 'approved'}
+          />
+          <Button
+            label="Request changes"
+            icon="edit-3"
+            variant="accentAmber"
             style={styles.changesButton}
             onPress={() => act('changes_requested')}
             disabled={!!submittingAction}
-          >
-            {submittingAction === 'changes_requested' ? (
-              <ActivityIndicator color={colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.buttonText}>Request changes</Text>
-            )}
-          </Pressable>
-          <Pressable style={styles.rejectButton} onPress={() => act('rejected')} disabled={!!submittingAction}>
-            {submittingAction === 'rejected' ? (
-              <ActivityIndicator color={colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.buttonText}>Reject</Text>
-            )}
-          </Pressable>
+            loading={submittingAction === 'changes_requested'}
+          />
+
+          {/* Reject is deliberately styled quieter (outline, not solid fill)
+              and set apart with extra spacing so it doesn't carry equal
+              visual weight to Approve/Request changes — it's the most
+              severe of the three actions. */}
+          <Button
+            label="Reject"
+            icon="x-circle"
+            variant="dangerOutline"
+            style={styles.rejectButton}
+            onPress={() => act('rejected')}
+            disabled={!!submittingAction}
+            loading={submittingAction === 'rejected'}
+          />
         </>
       ) : (
         <Text style={styles.meta}>This proposal has already been reviewed.</Text>
@@ -129,7 +159,7 @@ function createStyles(colors: Colors) {
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.md,
+      borderRadius: radius.xl,
       padding: spacing.md,
       fontSize: 16,
       minHeight: 90,
@@ -138,39 +168,9 @@ function createStyles(colors: Colors) {
       backgroundColor: colors.surface,
     },
     error: { color: colors.danger, marginTop: spacing.sm },
-    pdfButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.sm,
-      borderWidth: 1,
-      borderColor: colors.primary,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      marginTop: spacing.lg,
-    },
-    pdfButtonText: { color: colors.primary, fontWeight: '600' },
-    approveButton: {
-      backgroundColor: colors.accents.green.accent,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      alignItems: 'center',
-      marginTop: spacing.lg,
-    },
-    changesButton: {
-      backgroundColor: colors.accents.amber.accent,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      alignItems: 'center',
-      marginTop: spacing.md,
-    },
-    rejectButton: {
-      backgroundColor: colors.danger,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      alignItems: 'center',
-      marginTop: spacing.md,
-    },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    pdfButton: { marginTop: spacing.lg },
+    approveButton: { marginTop: spacing.lg },
+    changesButton: { marginTop: spacing.md },
+    rejectButton: { marginTop: spacing.xl },
   });
 }

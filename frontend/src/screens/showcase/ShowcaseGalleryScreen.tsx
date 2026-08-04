@@ -1,23 +1,25 @@
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
 import Text from '../../components/Text';
 import { Cohort, listCohorts } from '../../api/cohorts';
 import { listShowcaseEntries, resolvePhotoUrl, ShowcaseEntryResponse } from '../../api/showcase';
 import { useAuth } from '../../auth/AuthContext';
-import Card from '../../components/Card';
+import CohortPicker from '../../components/CohortPicker';
 import EmptyState from '../../components/EmptyState';
 import { ShowcaseStackParamList } from '../../navigation/types';
-import { Colors, radius, spacing, typography, useTheme } from '../../theme';
+import { Colors, elevation, radius, spacing, typography, useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<ShowcaseStackParamList, 'ShowcaseGallery'>;
 
 export default function ShowcaseGalleryScreen({ navigation }: Props) {
   const { user, token } = useAuth();
-  const { colors } = useTheme();
-  const styles = createStyles(colors);
+  const { mode, colors } = useTheme();
+  const styles = createStyles(colors, mode);
+  const accentList = Object.values(colors.accents);
   const [entries, setEntries] = useState<ShowcaseEntryResponse[]>([]);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [selectedCohortId, setSelectedCohortId] = useState<string | null>(null);
@@ -47,10 +49,10 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
     }, [load])
   );
 
-  const cohortNameById = useMemo(() => {
-    const map: Record<string, string> = {};
+  const cohortYearById = useMemo(() => {
+    const map: Record<string, number> = {};
     cohorts.forEach((c) => {
-      map[c.id] = `${c.name} (${c.year})`;
+      map[c.id] = c.year;
     });
     return map;
   }, [cohorts]);
@@ -76,66 +78,77 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
 
   return (
     <View style={styles.screen}>
+      <Text style={styles.summary}>
+        {entries.length} project{entries.length === 1 ? '' : 's'} · {cohortsWithEntries.length} cohort
+        {cohortsWithEntries.length === 1 ? '' : 's'}
+      </Text>
+
       {user?.role === 'student' ? (
-        <Pressable style={styles.editLink} onPress={() => navigation.navigate('ShowcaseEdit')}>
+        <Pressable
+          style={({ pressed }) => [styles.editLink, pressed && styles.editLinkPressed]}
+          onPress={() => navigation.navigate('ShowcaseEdit')}
+          accessibilityRole="button"
+          accessibilityLabel="Manage my group's showcase"
+        >
           <Feather name="edit-3" size={14} color={colors.accents.pink.fg} />
           <Text style={styles.editLinkText}>My group's showcase</Text>
+          <Feather name="chevron-right" size={14} color={colors.accents.pink.fg} />
         </Pressable>
       ) : null}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {cohortsWithEntries.length > 1 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          <Pressable
-            style={[styles.filterChip, !selectedCohortId && styles.filterChipSelected]}
-            onPress={() => setSelectedCohortId(null)}
-          >
-            <Text style={[styles.filterChipText, !selectedCohortId && styles.filterChipTextSelected]}>
-              All cohorts
-            </Text>
-          </Pressable>
-          {cohortsWithEntries.map((c) => (
-            <Pressable
-              key={c.id}
-              style={[styles.filterChip, selectedCohortId === c.id && styles.filterChipSelected]}
-              onPress={() => setSelectedCohortId(c.id)}
-            >
-              <Text style={[styles.filterChipText, selectedCohortId === c.id && styles.filterChipTextSelected]}>
-                {c.name} ({c.year})
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={styles.filterRow}>
+          <CohortPicker
+            selectedCohortId={selectedCohortId}
+            onSelect={setSelectedCohortId}
+            cohorts={cohortsWithEntries}
+            allowAll
+          />
+        </View>
       ) : null}
 
       <FlatList
         contentContainerStyle={styles.list}
+        columnWrapperStyle={styles.row}
+        numColumns={2}
         data={visibleEntries}
         keyExtractor={(e) => e.id}
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const photo = resolvePhotoUrl(item.photos[0]?.url ?? null);
-          const cohortName = cohortNameById[item.cohortId];
+          const cohortYear = cohortYearById[item.cohortId];
+          const accent = accentList[index % accentList.length];
           return (
-            <Pressable onPress={() => navigation.navigate('ShowcaseDetail', { entry: item })}>
-              <Card style={styles.card} tint={colors.accents.pink}>
-                {photo ? (
-                  <Image source={{ uri: photo }} style={styles.thumb} resizeMode="cover" />
-                ) : (
-                  <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                    <Feather name="image" size={22} color={colors.textMuted} />
+            <Pressable
+              style={styles.cardWrap}
+              onPress={() => navigation.navigate('ShowcaseDetail', { entry: item })}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${item.title}, ${item.groupName ?? `Group ${item.groupNumber}`}`}
+            >
+              {({ pressed }) => (
+                <View style={[styles.card, pressed && styles.cardPressed]}>
+                  {photo ? (
+                    <Image source={{ uri: photo }} style={styles.thumb} resizeMode="cover" />
+                  ) : (
+                    <LinearGradient
+                      colors={[accent.accent, accent.fg]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.thumb}
+                    />
+                  )}
+                  <View style={styles.cardBody}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.cardMeta}>
+                      {item.groupName ?? `Group ${item.groupNumber}`}
+                      {cohortYear ? ` · ${cohortYear}` : ''}
+                    </Text>
                   </View>
-                )}
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.cardMeta}>
-                    {item.groupName ?? `Group ${item.groupNumber}`}
-                    {cohortName ? ` · ${cohortName}` : ''}
-                  </Text>
                 </View>
-              </Card>
+              )}
             </Pressable>
           );
         }}
@@ -155,36 +168,52 @@ export default function ShowcaseGalleryScreen({ navigation }: Props) {
   );
 }
 
-function createStyles(colors: Colors) {
+function createStyles(colors: Colors, mode: 'light' | 'dark') {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+    summary: {
+      ...typography.caption,
+      color: colors.textMuted,
+      paddingTop: spacing.lg,
+      paddingHorizontal: spacing.lg,
+    },
     editLink: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
       alignSelf: 'flex-end',
+      minHeight: 44,
       margin: spacing.lg,
       marginBottom: 0,
-    },
-    editLinkText: { color: colors.accents.pink.fg, fontWeight: '600', fontSize: 13 },
-    filterRow: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-    filterChip: {
-      borderRadius: radius.sm,
-      paddingVertical: 5,
+      paddingVertical: spacing.xs,
       paddingHorizontal: spacing.md,
-      backgroundColor: colors.surfaceSunken,
+      borderRadius: radius.pill,
+      backgroundColor: colors.accents.pink.tint,
     },
-    filterChipSelected: { backgroundColor: colors.accents.pink.accent },
-    filterChipText: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
-    filterChipTextSelected: { color: colors.textOnPrimary },
+    editLinkPressed: { opacity: 0.8 },
+    editLinkText: { color: colors.accents.pink.fg, fontWeight: '600', fontSize: 13 },
+    // CohortPicker (same component used on Leaderboard/Groups/Criteria/Judges/
+    // Payments) owns its own chip styling — this just aligns it with the
+    // screen's horizontal padding.
+    filterRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
     list: { padding: spacing.lg, gap: spacing.md },
-    card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-    thumb: { width: 56, height: 56, borderRadius: radius.sm },
-    thumbPlaceholder: { backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
-    cardBody: { flex: 1 },
-    cardTitle: { ...typography.body, fontWeight: '600' },
-    cardMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+    row: { gap: spacing.md },
+    cardWrap: { flex: 1 },
+    card: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: radius.xxl,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      ...elevation(mode, 'sm'),
+    },
+    cardPressed: { opacity: 0.85 },
+    thumb: { width: '100%', aspectRatio: 1.5 },
+    cardBody: { padding: spacing.md, gap: 2 },
+    cardTitle: { ...typography.body, fontWeight: '700' },
+    cardMeta: { ...typography.caption, color: colors.textMuted },
     error: { color: colors.danger, textAlign: 'center', padding: spacing.md },
   });
 }

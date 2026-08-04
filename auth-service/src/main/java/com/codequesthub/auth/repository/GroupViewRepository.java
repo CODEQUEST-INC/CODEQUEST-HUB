@@ -7,4 +7,5 @@ import java.util.UUID;
 public interface GroupViewRepository extends JpaRepository<GroupView, UUID> {
     boolean existsBySupervisorId(UUID supervisorId);
     boolean existsByGroupLeaderId(UUID groupLeaderId);
+    long countBySupervisorIdIsNull();
 }

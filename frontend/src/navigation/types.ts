@@ -10,25 +10,22 @@ export type AuthStackParamList = {
 export type RootStackParamList = {
   Main: undefined;
   Profile: undefined;
-  Settings: undefined;
+  Help: undefined;
 };
 
 export type MainTabsParamList = {
   Dashboard: undefined;
   Group: undefined;
   Proposal: undefined;
-  ReviewQueue: undefined;
   Tasks: undefined;
   Judge: undefined;
   Leaderboard: undefined;
   Showcase: undefined;
-  Admin: undefined;
 };
 
 export type ProposalStackParamList = {
   ProposalStatus: undefined;
   ProposalForm: { mode: 'submit' } | { mode: 'resubmit'; proposal: ProposalResponse };
-  ProposalHistory: { proposalId: string };
 };
 
 export type SupervisorStackParamList = {

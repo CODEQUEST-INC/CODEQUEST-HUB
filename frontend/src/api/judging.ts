@@ -34,6 +34,7 @@ export interface Scorecard {
   judgeId: string;
   submittedAt: string;
   updatedAt: string;
+  comment: string | null;
   scores: ScorecardScoreResponse[];
 }
 
@@ -44,6 +45,12 @@ export interface LeaderboardEntry {
   groupPhotoUrl: string | null;
   averageScore: number | null;
   judgeCount: number;
+}
+
+export interface LeaderboardResponse {
+  published: boolean;
+  publishedAt: string | null;
+  entries: LeaderboardEntry[];
 }
 
 export interface CreateCriterionRequest {
@@ -93,9 +100,14 @@ export function removeJudge(judgeAssignmentId: string, token: string): Promise<v
 export function submitScorecard(
   groupId: string,
   scores: ScoreEntry[],
-  token: string
+  token: string,
+  comment?: string
 ): Promise<Scorecard> {
-  return request<Scorecard>('/api/judging/scorecards', { method: 'POST', body: { groupId, scores }, token });
+  return request<Scorecard>('/api/judging/scorecards', {
+    method: 'POST',
+    body: { groupId, scores, comment: comment || undefined },
+    token,
+  });
 }
 
 export async function getMyScorecard(groupId: string, token: string): Promise<Scorecard | null> {
@@ -107,6 +119,16 @@ export async function getMyScorecard(groupId: string, token: string): Promise<Sc
   }
 }
 
-export function getLeaderboard(cohortId: string, token: string): Promise<LeaderboardEntry[]> {
-  return request<LeaderboardEntry[]>(`/api/judging/leaderboard?cohortId=${cohortId}`, { token });
+// Admin-only — individual judge scores for one group (leaderboard shows the
+// cohort's aggregate; this backs the "who scored this and how" drill-down).
+export function getScorecardsForGroup(groupId: string, token: string): Promise<Scorecard[]> {
+  return request<Scorecard[]>(`/api/judging/scorecards/group/${groupId}`, { token });
+}
+
+export function getLeaderboard(cohortId: string, token: string): Promise<LeaderboardResponse> {
+  return request<LeaderboardResponse>(`/api/judging/leaderboard?cohortId=${cohortId}`, { token });
+}
+
+export function publishLeaderboard(cohortId: string, token: string): Promise<void> {
+  return request<void>(`/api/judging/leaderboard/publish?cohortId=${cohortId}`, { method: 'POST', token });
 }
