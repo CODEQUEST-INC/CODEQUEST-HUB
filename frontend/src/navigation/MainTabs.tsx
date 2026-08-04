@@ -43,7 +43,7 @@ function dashboardTabFor(role: string | undefined, colors: ReturnType<typeof use
   if (role === 'supervisor') {
     return {
       component: SupervisorStack,
-      title: 'Review Queue',
+      title: 'Dashboard',
       icon: 'clipboard' as const,
       tint: colors.accents.coral.fg,
       isStack: true,
