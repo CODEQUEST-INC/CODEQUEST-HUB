@@ -34,6 +34,12 @@ public class User {
     @Column(name = "cohort_id")
     private UUID cohortId;
 
+    @Column(name = "reset_token", length = 64)
+    private String resetToken;
+
+    @Column(name = "reset_token_expires_at")
+    private OffsetDateTime resetTokenExpiresAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -66,6 +72,10 @@ public class User {
     public void setIndexNumber(String v) { this.indexNumber = v; }
     public UUID getCohortId() { return cohortId; }
     public void setCohortId(UUID v) { this.cohortId = v; }
+    public String getResetToken() { return resetToken; }
+    public void setResetToken(String v) { this.resetToken = v; }
+    public OffsetDateTime getResetTokenExpiresAt() { return resetTokenExpiresAt; }
+    public void setResetTokenExpiresAt(OffsetDateTime v) { this.resetTokenExpiresAt = v; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

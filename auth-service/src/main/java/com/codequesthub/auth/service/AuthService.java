@@ -23,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +45,9 @@ public class AuthService {
     private final NotificationRepository notificationRepo;
     private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
+    private final LoginRateLimiter rateLimiter;
+    private final EmailService emailService;
+    private final SecureRandom random = new SecureRandom();
 
     public AuthService(UserRepository userRepo, CohortViewRepository cohortViewRepo,
                        GroupMemberViewRepository groupMemberViewRepo, GroupViewRepository groupViewRepo,
@@ -51,7 +55,8 @@ public class AuthService {
                        TaskViewRepository taskViewRepo, ShowcaseEntryViewRepository showcaseEntryViewRepo,
                        JudgeViewRepository judgeViewRepo, ScorecardViewRepository scorecardViewRepo,
                        PaymentRecordViewRepository paymentRecordViewRepo, NotificationRepository notificationRepo,
-                       PasswordEncoder encoder, JwtUtil jwtUtil) {
+                       PasswordEncoder encoder, JwtUtil jwtUtil,
+                       LoginRateLimiter rateLimiter, EmailService emailService) {
         this.userRepo = userRepo;
         this.cohortViewRepo = cohortViewRepo;
         this.groupMemberViewRepo = groupMemberViewRepo;
@@ -66,6 +71,8 @@ public class AuthService {
         this.notificationRepo = notificationRepo;
         this.encoder = encoder;
         this.jwtUtil = jwtUtil;
+        this.rateLimiter = rateLimiter;
+        this.emailService = emailService;
     }
 
     public AuthResponse register(RegisterRequest req) {
@@ -112,14 +119,14 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest req) {
-        User user = userRepo.findByEmail(req.getEmail())
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED, "Email or password is incorrect"));
+        rateLimiter.checkAllowed(req.getEmail());
 
-        if (!encoder.matches(req.getPassword(), user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                "Email or password is incorrect");
+        User user = userRepo.findByEmail(req.getEmail()).orElse(null);
+        if (user == null || !encoder.matches(req.getPassword(), user.getPasswordHash())) {
+            rateLimiter.recordFailedAttempt(req.getEmail());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email or password is incorrect");
         }
+        rateLimiter.recordSuccess(req.getEmail());
 
         String token = jwtUtil.generateToken(
             user.getId().toString(), user.getEmail(), user.getRole().name());
@@ -225,5 +232,54 @@ public class AuthService {
             notification.setReadAt(OffsetDateTime.now());
             notificationRepo.save(notification);
         }
+    }
+
+    public void changePassword(UUID userId, ChangePasswordRequest req) {
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!encoder.matches(req.getCurrentPassword(), user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+        }
+
+        user.setPasswordHash(encoder.encode(req.getNewPassword()));
+        userRepo.save(user);
+    }
+
+    // Deliberately responds the same way whether or not the email exists —
+    // confirming/denying an account's existence here would let this endpoint
+    // be used to enumerate registered emails.
+    public void forgotPassword(String email) {
+        userRepo.findByEmail(email).ifPresent(user -> {
+            String token = generateResetToken();
+            user.setResetToken(token);
+            user.setResetTokenExpiresAt(OffsetDateTime.now().plusHours(1));
+            userRepo.save(user);
+            emailService.sendPasswordReset(user.getEmail(), token);
+        });
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        User user = userRepo.findByResetToken(token)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset code"));
+
+        if (user.getResetTokenExpiresAt() == null || user.getResetTokenExpiresAt().isBefore(OffsetDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset code");
+        }
+
+        user.setPasswordHash(encoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiresAt(null);
+        userRepo.save(user);
+    }
+
+    private String generateResetToken() {
+        byte[] bytes = new byte[24];
+        random.nextBytes(bytes);
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }

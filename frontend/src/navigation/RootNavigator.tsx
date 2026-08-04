@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import HelpScreen from '../screens/HelpScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { useTheme } from '../theme';
@@ -33,6 +34,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
           <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
           <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Help & Rules' }} />
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
         </Stack.Navigator>
       ) : (
         <AuthStack />

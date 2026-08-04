@@ -216,6 +216,16 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
         <Pressable
           style={[styles.row, styles.rowBorder]}
+          onPress={() => navigation.navigate('ChangePassword')}
+          accessibilityRole="button"
+          accessibilityLabel="Change password"
+        >
+          <Feather name="lock" size={18} color={colors.text} />
+          <Text style={styles.rowLabel}>Change password</Text>
+          <Feather name="chevron-right" size={16} color={colors.textMuted} />
+        </Pressable>
+        <Pressable
+          style={[styles.row, styles.rowBorder]}
           onPress={() => navigation.navigate('Help')}
           accessibilityRole="button"
           accessibilityLabel="Help and rules"

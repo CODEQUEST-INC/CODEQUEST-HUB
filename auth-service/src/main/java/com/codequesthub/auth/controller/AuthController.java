@@ -120,6 +120,35 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    // any authenticated user — requires the current password
+    @PatchMapping("/me/password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest req,
+                                             @RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+        authService.changePassword(userId, req);
+        return ResponseEntity.noContent().build();
+    }
+
+    // public — always responds the same way regardless of whether the email
+    // exists, so this can't be used to enumerate registered accounts
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+        authService.forgotPassword(req.getEmail());
+        return ResponseEntity.ok(Map.of("data",
+            Map.of("message", "If that email is registered, a reset code has been sent.")));
+    }
+
+    // public — the reset code itself is the credential here
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        authService.resetPassword(req.getToken(), req.getNewPassword());
+        return ResponseEntity.noContent().build();
+    }
+
     // any authenticated user — their own notifications only
     @GetMapping("/notifications/mine")
     public ResponseEntity<?> myNotifications(@RequestHeader("Authorization") String authHeader) {

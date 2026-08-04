@@ -5,12 +5,14 @@ import { TaskResponse } from '../api/tasks';
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
 };
 
 export type RootStackParamList = {
   Main: undefined;
   Profile: undefined;
   Help: undefined;
+  ChangePassword: undefined;
 };
 
 export type MainTabsParamList = {

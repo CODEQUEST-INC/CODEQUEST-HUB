@@ -87,6 +87,15 @@ export default function LoginScreen({ navigation }: Props) {
               <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color={colors.textMuted} />
             </Pressable>
           </View>
+          <Pressable
+            onPress={() => navigation.navigate('ForgotPassword')}
+            hitSlop={8}
+            style={styles.forgotLink}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password?"
+          >
+            <Text style={styles.forgotLinkText}>Forgot password?</Text>
+          </Pressable>
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -171,6 +180,8 @@ function createStyles(colors: Colors) {
     },
     passwordRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
     passwordInput: { flex: 1, fontSize: 16, padding: 0 },
+    forgotLink: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
+    forgotLinkText: { color: colors.primary, fontWeight: '600', fontSize: 13 },
     button: { marginTop: spacing.sm },
     error: { color: colors.danger },
     link: { color: colors.primary, textAlign: 'center', marginTop: spacing.lg, fontWeight: '600' },
