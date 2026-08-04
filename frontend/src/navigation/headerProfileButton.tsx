@@ -23,8 +23,10 @@ export function headerProfileButton(navigation: NavigationProp<ParamListBase>) {
     return (
       <Pressable
         onPress={() => rootNavigation(navigation).navigate('Profile' as never)}
-        hitSlop={8}
+        hitSlop={10}
         style={{ marginRight: 16 }}
+        accessibilityRole="button"
+        accessibilityLabel="Open profile"
       >
         <Ionicons name="person-circle-outline" size={26} color={colors.text} />
       </Pressable>

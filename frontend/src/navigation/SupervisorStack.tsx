@@ -18,7 +18,7 @@ export default function SupervisorStack() {
         headerRight: headerProfileButton(navigation),
       })}
     >
-      <Stack.Screen name="ReviewQueue" component={ReviewQueueScreen} options={{ title: 'Review Queue' }} />
+      <Stack.Screen name="ReviewQueue" component={ReviewQueueScreen} options={{ title: 'Dashboard' }} />
       <Stack.Screen name="ReviewDetail" component={ReviewDetailScreen} options={{ title: 'Review Proposal' }} />
     </Stack.Navigator>
   );

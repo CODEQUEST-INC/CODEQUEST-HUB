@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Text from './Text';
-import { AccentSwatch, Colors, radius, spacing, typography, useTheme } from '../theme';
+import { AccentSwatch, Colors, elevation, radius, spacing, typography, useTheme } from '../theme';
 
 interface StatTileProps {
   icon: React.ComponentProps<typeof Feather>['name'];
@@ -12,8 +12,8 @@ interface StatTileProps {
 }
 
 export default function StatTile({ icon, label, value, tint }: StatTileProps) {
-  const { colors } = useTheme();
-  const styles = createStyles(colors);
+  const { mode, colors } = useTheme();
+  const styles = createStyles(colors, mode);
   return (
     <View style={styles.tile}>
       <View style={[styles.iconWrap, { backgroundColor: tint.tint }]}>
@@ -25,27 +25,28 @@ export default function StatTile({ icon, label, value, tint }: StatTileProps) {
   );
 }
 
-function createStyles(colors: Colors) {
+function createStyles(colors: Colors, mode: 'light' | 'dark') {
   return StyleSheet.create({
     tile: {
       flex: 1,
       minWidth: 120,
       backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
+      borderRadius: radius.xxl,
       padding: spacing.lg,
-      gap: spacing.xs,
+      gap: 3,
+      // elevation() is shadow-only and returns {} in dark mode (a shadow is
+      // invisible against a dark ground) — a border stands in for it there.
+      ...(mode === 'dark' ? { borderWidth: 1, borderColor: colors.border } : elevation(mode, 'sm')),
     },
     iconWrap: {
-      width: 32,
-      height: 32,
-      borderRadius: radius.sm,
+      width: 38,
+      height: 38,
+      borderRadius: radius.xl,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: spacing.xs,
+      marginBottom: spacing.sm,
     },
-    value: { ...typography.heading, fontSize: 22 },
+    value: { ...typography.heading, fontSize: 26 },
     label: { ...typography.caption, color: colors.textMuted },
   });
 }

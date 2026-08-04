@@ -17,6 +17,8 @@ export interface ShowcaseEntryResponse {
   description: string;
   githubUrl: string;
   photos: ShowcasePhoto[];
+  score: number | null;
+  rank: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -80,6 +82,13 @@ export async function addShowcasePhoto(
 
 export function deleteShowcasePhoto(groupId: string, photoId: string, token: string): Promise<ShowcaseEntryResponse> {
   return request<ShowcaseEntryResponse>(`/api/showcase/${groupId}/photo/${photoId}`, { method: 'DELETE', token });
+}
+
+export function setCoverPhoto(groupId: string, photoId: string, token: string): Promise<ShowcaseEntryResponse> {
+  return request<ShowcaseEntryResponse>(`/api/showcase/${groupId}/photo/${photoId}/cover`, {
+    method: 'PATCH',
+    token,
+  });
 }
 
 export function deleteShowcaseEntry(groupId: string, token: string): Promise<void> {

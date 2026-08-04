@@ -3,14 +3,49 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
+import Button from '../../components/Button';
 import { GroupResponse, listGroupsByCohort, resolveGroupPhotoUrl } from '../../api/groups';
 import { getMyScorecard, JudgingCriterion, listCriteria, ScoreEntry, submitScorecard } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
-import ProgressBar from '../../components/ProgressBar';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
+
+interface Draft {
+  scores: Record<string, string>;
+  comment: string;
+}
+
+function SegmentedScore({
+  value,
+  onChange,
+  color,
+  accessibilityLabel,
+}: {
+  value: number | null;
+  onChange: (n: number) => void;
+  color: string;
+  accessibilityLabel: string;
+}) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  return (
+    <View style={styles.segmentRow}>
+      {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+        <Pressable
+          key={n}
+          onPress={() => onChange(n)}
+          hitSlop={4}
+          style={[styles.segmentBlock, value !== null && n <= value ? { backgroundColor: color } : styles.segmentBlockEmpty]}
+          accessibilityRole="button"
+          accessibilityLabel={`${accessibilityLabel}: ${n}`}
+          accessibilityState={{ selected: value === n }}
+        />
+      ))}
+    </View>
+  );
+}
 
 export default function ScorecardScreen() {
   const { token } = useAuth();
@@ -22,6 +57,13 @@ export default function ScorecardScreen() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [criteria, setCriteria] = useState<JudgingCriterion[]>([]);
   const [scores, setScores] = useState<Record<string, string>>({});
+  const [comment, setComment] = useState('');
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  // Keeps in-progress scores for a project when you switch to another one in
+  // the picker and come back — session-only, never sent to the server. A real
+  // "submit" always still requires every criterion, same as before.
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [justSaved, setJustSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -34,7 +76,9 @@ export default function ScorecardScreen() {
     let cancelled = false;
     setGroupId(null);
     setScores({});
+    setComment('');
     setSuccess(false);
+    setDrafts({});
     setLoading(true);
     setError(null);
     Promise.all([listGroupsByCohort(cohortId, token), listCriteria(cohortId, token)])
@@ -58,6 +102,16 @@ export default function ScorecardScreen() {
     if (!token || !groupId) return;
     setSuccess(false);
     setError(null);
+    setJustSaved(false);
+
+    const draft = drafts[groupId];
+    if (draft) {
+      setScores(draft.scores);
+      setComment(draft.comment);
+      setHasSubmitted(false);
+      return;
+    }
+
     getMyScorecard(groupId, token)
       .then((scorecard) => {
         if (scorecard) {
@@ -66,19 +120,27 @@ export default function ScorecardScreen() {
             prefilled[s.criterionId] = String(s.score);
           });
           setScores(prefilled);
+          setComment(scorecard.comment ?? '');
+          setHasSubmitted(true);
         } else {
           setScores({});
+          setComment('');
+          setHasSubmitted(false);
         }
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load your existing scorecard'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, groupId]);
 
-  // maxLength alone only caps digit count ("78" is 2 digits, same as "10") —
-  // reject any keystroke that would make the value fall outside 1-10 rather
-  // than catching it only at submit time.
-  const onChangeScore = (criterionId: string, raw: string) => {
-    if (raw !== '' && (!/^\d{1,2}$/.test(raw) || parseInt(raw, 10) > 10)) return;
-    setScores((prev) => ({ ...prev, [criterionId]: raw }));
+  const onChangeScore = (criterionId: string, n: number) => {
+    setScores((prev) => ({ ...prev, [criterionId]: String(n) }));
+    setJustSaved(false);
+  };
+
+  const onSave = () => {
+    if (!groupId) return;
+    setDrafts((prev) => ({ ...prev, [groupId]: { scores, comment } }));
+    setJustSaved(true);
   };
 
   const onSubmit = async () => {
@@ -96,14 +158,30 @@ export default function ScorecardScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await submitScorecard(groupId, entries, token);
+      await submitScorecard(groupId, entries, token, comment.trim());
       setSuccess(true);
+      setHasSubmitted(true);
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[groupId];
+        return next;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to submit scorecard');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const selectedGroup = groups.find((g) => g.id === groupId) ?? null;
+  const selectedIndex = groupId ? groups.findIndex((g) => g.id === groupId) : -1;
+
+  const weightedTotal = criteria.reduce((sum, c) => {
+    const raw = scores[c.id];
+    const value = raw ? parseInt(raw, 10) : NaN;
+    if (Number.isNaN(value)) return sum;
+    return sum + (value * Number(c.weight)) / 100;
+  }, 0);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
@@ -119,8 +197,10 @@ export default function ScorecardScreen() {
             {groups.map((g) => (
               <Pressable
                 key={g.id}
-                style={[styles.chip, groupId === g.id && styles.chipSelected]}
+                style={({ pressed }) => [styles.chip, groupId === g.id && styles.chipSelected, pressed && styles.chipPressed]}
                 onPress={() => setGroupId(g.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: groupId === g.id }}
               >
                 <Avatar name={g.name ?? `Group ${g.groupNumber}`} size={20} photoUrl={resolveGroupPhotoUrl(g.photoUrl)} />
                 <Text style={[styles.chipText, groupId === g.id && styles.chipTextSelected]}>
@@ -137,31 +217,62 @@ export default function ScorecardScreen() {
         <Text style={styles.emptyText}>No active judging criteria configured for this cohort yet.</Text>
       ) : null}
 
-      {groupId && criteria.length > 0 ? (
-        <Card style={styles.scoreCard}>
+      {selectedGroup && criteria.length > 0 ? (
+        <>
+          <View style={styles.projectHeaderRow}>
+            <Text style={styles.projectEyebrow}>
+              PROJECT {selectedIndex + 1} OF {groups.length}
+            </Text>
+            <View style={[styles.statusPill, hasSubmitted ? styles.statusPillScored : styles.statusPillDraft]}>
+              <Text style={[styles.statusPillText, { color: hasSubmitted ? colors.accents.green.fg : colors.textMuted }]}>
+                {hasSubmitted ? 'Scored' : 'Draft'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.projectTitle}>{selectedGroup.name ?? `Group ${selectedGroup.groupNumber}`}</Text>
+          <Text style={styles.projectMeta}>
+            Group {selectedGroup.groupNumber} · {selectedGroup.members.length} member{selectedGroup.members.length === 1 ? '' : 's'}
+          </Text>
+
           {criteria.map((c, i) => {
             const raw = scores[c.id];
-            const value = raw ? parseInt(raw, 10) : NaN;
+            const value = raw ? parseInt(raw, 10) : null;
             const barColor = accentList[i % accentList.length].accent;
             return (
-              <View key={c.id} style={styles.scoreRow}>
-                <View style={styles.scoreRowTop}>
-                  <Text style={styles.criterionName}>
-                    {c.name} <Text style={styles.criterionWeight}>({c.weight}%)</Text>
-                  </Text>
-                  <TextInput
-                    style={styles.scoreInput}
-                    value={scores[c.id] ?? ''}
-                    onChangeText={(v) => onChangeScore(c.id, v)}
-                    keyboardType="numeric"
-                    placeholder="1-10"
-                    maxLength={2}
-                  />
+              <Card key={c.id} style={styles.criterionCard}>
+                <View style={styles.criterionHeader}>
+                  <Text style={styles.criterionName}>{c.name}</Text>
+                  <View style={styles.criterionScoreWrap}>
+                    <Text style={styles.criterionWeight}>{c.weight}%</Text>
+                    <Text style={styles.criterionScoreValue}>{value ?? '—'}</Text>
+                  </View>
                 </View>
-                <ProgressBar value={Number.isFinite(value) ? value / 10 : 0} color={barColor} />
-              </View>
+                <SegmentedScore
+                  value={value}
+                  onChange={(n) => onChangeScore(c.id, n)}
+                  color={barColor}
+                  accessibilityLabel={`Score for ${c.name}`}
+                />
+              </Card>
             );
           })}
+
+          <Card style={styles.criterionCard}>
+            <TextInput
+              style={styles.commentInput}
+              value={comment}
+              onChangeText={(v) => {
+                setComment(v);
+                setJustSaved(false);
+              }}
+              placeholder="Comment to the team — optional, shared after results"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={2}
+              maxLength={2000}
+              accessibilityLabel="Comment for this group, optional"
+            />
+          </Card>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {success ? (
@@ -170,15 +281,41 @@ export default function ScorecardScreen() {
               <Text style={styles.success}>Scorecard submitted.</Text>
             </View>
           ) : null}
+          {justSaved ? (
+            <View style={styles.successRow}>
+              <Feather name="check-circle" size={16} color={colors.textMuted} />
+              <Text style={styles.savedText}>Saved for this session.</Text>
+            </View>
+          ) : null}
 
-          <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
-            {submitting ? (
-              <ActivityIndicator color={colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.buttonText}>Submit scorecard</Text>
-            )}
-          </Pressable>
-        </Card>
+          <View style={styles.footer}>
+            <View style={styles.footerWeighted}>
+              <Text style={styles.footerWeightedLabel}>WEIGHTED</Text>
+              <Text style={styles.footerWeightedValue}>
+                {weightedTotal.toFixed(1)}
+                <Text style={styles.footerWeightedMax}>/10</Text>
+              </Text>
+            </View>
+            <View style={styles.footerButtons}>
+              <Button label="Save" onPress={onSave} variant="secondary" style={styles.saveButton} accessibilityLabel="Save progress for this session" />
+              <Button
+                label="Submit"
+                onPress={onSubmit}
+                loading={submitting}
+                style={[
+                  styles.submitButton,
+                  {
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 14,
+                    elevation: 6,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        </>
       ) : null}
     </ScrollView>
   );
@@ -193,6 +330,7 @@ function createStyles(colors: Colors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
+      minHeight: 44,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.pill,
@@ -200,27 +338,58 @@ function createStyles(colors: Colors) {
       paddingHorizontal: spacing.lg,
     },
     chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipPressed: { opacity: 0.8 },
     chipText: { color: colors.text },
     chipTextSelected: { color: colors.textOnPrimary },
-    scoreCard: { marginTop: spacing.md, gap: spacing.lg },
-    scoreRow: { gap: spacing.sm },
-    scoreRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-    criterionName: { ...typography.body, flex: 1 },
-    criterionWeight: { color: colors.textMuted },
-    scoreInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.sm,
-      padding: spacing.sm,
-      width: 60,
-      textAlign: 'center',
-      backgroundColor: colors.surface,
+    projectHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: spacing.lg,
     },
-    button: { backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.lg, alignItems: 'center' },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    projectEyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, color: colors.textMuted },
+    statusPill: { paddingVertical: 3, paddingHorizontal: spacing.md, borderRadius: radius.pill },
+    statusPillDraft: { backgroundColor: colors.surfaceSunken },
+    statusPillScored: { backgroundColor: colors.accents.green.tint },
+    statusPillText: { fontSize: 11, fontWeight: '700' },
+    projectTitle: { ...typography.heading, fontSize: 22, marginTop: 4 },
+    projectMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2, marginBottom: spacing.sm },
+    criterionCard: { borderRadius: radius.xxl, gap: spacing.md },
+    criterionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    criterionName: { ...typography.body, fontWeight: '700', flex: 1 },
+    criterionScoreWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    criterionWeight: { ...typography.caption, color: colors.textMuted },
+    criterionScoreValue: { fontSize: 22, fontWeight: '800', color: colors.text, minWidth: 24, textAlign: 'right' },
+    segmentRow: { flexDirection: 'row', gap: 4 },
+    segmentBlock: { flex: 1, height: 32, borderRadius: radius.sm },
+    segmentBlockEmpty: { backgroundColor: colors.surfaceSunken },
+    commentInput: {
+      minHeight: 60,
+      textAlignVertical: 'top',
+      color: colors.text,
+      fontSize: 14,
+    },
     emptyText: { color: colors.textMuted },
     error: { color: colors.danger },
     successRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
     success: { color: colors.accents.green.fg },
+    savedText: { color: colors.textMuted },
+    footer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+      marginTop: spacing.md,
+      paddingTop: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    footerWeighted: { gap: 2 },
+    footerWeightedLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, color: colors.textMuted },
+    footerWeightedValue: { fontSize: 28, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] },
+    footerWeightedMax: { fontSize: 15, fontWeight: '600', color: colors.textMuted },
+    footerButtons: { flexDirection: 'row', gap: spacing.sm },
+    saveButton: { borderRadius: radius.xxxl },
+    submitButton: { borderRadius: radius.xxxl },
   });
 }

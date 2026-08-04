@@ -1,8 +1,10 @@
+import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import TextInput from '../components/TextInput';
 import Text from '../components/Text';
+import Button from '../components/Button';
 import { useAuth } from '../auth/AuthContext';
 import { AuthStackParamList } from '../navigation/types';
 import { Colors, radius, spacing, typography, useTheme } from '../theme';
@@ -17,6 +19,9 @@ export default function LoginScreen({ navigation }: Props) {
   const styles = createStyles(colors);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,34 +40,89 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <View style={styles.screen}>
       <View style={styles.container}>
-        <Image source={logo} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>CodeQuestHub</Text>
+        <Image source={logo} style={styles.logo} resizeMode="contain" accessible={false} />
+        <Text style={styles.title}>Welcome back</Text>
+        <Text style={styles.subtitle}>Sign in to your CodeQuest Hub account</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={colors.textMuted}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={styles.field}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={[styles.input, emailFocused && styles.inputFocused]}
+            placeholder="you@knust.edu.gh"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            autoComplete="email"
+            accessibilityLabel="Email"
+            value={email}
+            onChangeText={setEmail}
+            onFocus={() => setEmailFocused(true)}
+            onBlur={() => setEmailFocused(false)}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Password</Text>
+          <View style={[styles.input, styles.passwordRow, passwordFocused && styles.inputFocused]}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry={!showPassword}
+              textContentType="password"
+              autoComplete="password"
+              accessibilityLabel="Password"
+              value={password}
+              onChangeText={setPassword}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+            />
+            <Pressable
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            >
+              <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <Pressable
+            onPress={() => navigation.navigate('ForgotPassword')}
+            hitSlop={8}
+            style={styles.forgotLink}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password?"
+          >
+            <Text style={styles.forgotLinkText}>Forgot password?</Text>
+          </Pressable>
+        </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
-          {submitting ? <ActivityIndicator color={colors.textOnPrimary} /> : <Text style={styles.buttonText}>Log in</Text>}
-        </Pressable>
+        <Button
+          label="Log in"
+          onPress={onSubmit}
+          loading={submitting}
+          style={[
+            styles.button,
+            {
+              borderRadius: radius.xxxl,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.32,
+              shadowRadius: 16,
+              elevation: 8,
+            },
+          ]}
+        />
 
-        <Pressable onPress={() => navigation.navigate('Register')}>
+        <Pressable
+          onPress={() => navigation.navigate('Register')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Need an account? Register"
+        >
           <Text style={styles.link}>Need an account? Register</Text>
         </Pressable>
       </View>
@@ -80,30 +140,49 @@ function createStyles(colors: Colors) {
       padding: spacing.xxl,
       gap: spacing.md,
     },
-    logo: { width: 88, height: 88, alignSelf: 'center', marginBottom: spacing.md },
+    logo: {
+      width: 72,
+      height: 72,
+      alignSelf: 'center',
+      marginBottom: spacing.lg,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 14,
+      elevation: 6,
+    },
     title: {
       ...typography.heading,
-      fontSize: 28,
+      fontSize: 30,
       textAlign: 'center',
-      marginBottom: spacing.xxl,
-      color: colors.primaryForeground,
+      color: colors.text,
     },
+    subtitle: {
+      ...typography.body,
+      textAlign: 'center',
+      color: colors.textMuted,
+      marginBottom: spacing.xl,
+    },
+    field: { gap: spacing.xs },
+    label: { ...typography.label, color: colors.textMuted },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.md,
+      borderRadius: radius.xl,
       padding: spacing.md,
+      minHeight: 44,
       fontSize: 16,
       backgroundColor: colors.surface,
     },
-    button: {
-      backgroundColor: colors.primary,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      alignItems: 'center',
-      marginTop: spacing.sm,
+    inputFocused: {
+      borderColor: colors.primary,
+      borderWidth: 2,
     },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
+    passwordRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+    passwordInput: { flex: 1, fontSize: 16, padding: 0 },
+    forgotLink: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center' },
+    forgotLinkText: { color: colors.primary, fontWeight: '600', fontSize: 13 },
+    button: { marginTop: spacing.sm },
     error: { color: colors.danger },
     link: { color: colors.primary, textAlign: 'center', marginTop: spacing.lg, fontWeight: '600' },
   });

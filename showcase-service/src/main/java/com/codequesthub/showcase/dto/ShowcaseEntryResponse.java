@@ -3,6 +3,7 @@ package com.codequesthub.showcase.dto;
 import com.codequesthub.showcase.entity.ShowcaseEntry;
 import com.codequesthub.showcase.entity.ShowcasePhoto;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -18,10 +19,15 @@ public class ShowcaseEntryResponse {
     private final String description;
     private final String githubUrl;
     private final List<ShowcasePhotoResponse> photos;
+    private final BigDecimal score;
+    private final Integer rank;
     private final OffsetDateTime createdAt;
     private final OffsetDateTime updatedAt;
 
-    public ShowcaseEntryResponse(ShowcaseEntry entry, Integer groupNumber, String groupName, List<ShowcasePhoto> photos) {
+    // score/rank are null unless the cohort's leaderboard has been published —
+    // see ShowcaseService.computeRanksForCohort.
+    public ShowcaseEntryResponse(ShowcaseEntry entry, Integer groupNumber, String groupName,
+                                  List<ShowcasePhoto> photos, BigDecimal score, Integer rank) {
         this.id = entry.getId();
         this.groupId = entry.getGroupId();
         this.groupNumber = groupNumber;
@@ -31,6 +37,8 @@ public class ShowcaseEntryResponse {
         this.description = entry.getDescription();
         this.githubUrl = entry.getGithubUrl();
         this.photos = photos.stream().map(ShowcasePhotoResponse::new).toList();
+        this.score = score;
+        this.rank = rank;
         this.createdAt = entry.getCreatedAt();
         this.updatedAt = entry.getUpdatedAt();
     }
@@ -44,6 +52,8 @@ public class ShowcaseEntryResponse {
     public String getDescription() { return description; }
     public String getGithubUrl() { return githubUrl; }
     public List<ShowcasePhotoResponse> getPhotos() { return photos; }
+    public BigDecimal getScore() { return score; }
+    public Integer getRank() { return rank; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

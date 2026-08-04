@@ -1,8 +1,10 @@
+import { Feather } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../components/TextInput';
 import Text from '../components/Text';
+import Button from '../components/Button';
 import { UserRole } from '../api/auth';
 import { Cohort, listCohorts } from '../api/cohorts';
 import { useAuth } from '../auth/AuthContext';
@@ -12,6 +14,16 @@ import { Colors, radius, spacing, typography, useTheme } from '../theme';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 const ROLES: UserRole[] = ['student', 'supervisor', 'admin'];
+
+// Purely a client-side UX signal (length + variety), not a security policy —
+// the backend is the source of truth on what passwords it'll accept.
+function passwordStrength(password: string): number {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[0-9]/.test(password) && /[a-zA-Z]/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password) || password.length >= 12) score++;
+  return score;
+}
 
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
@@ -25,8 +37,12 @@ export default function RegisterScreen({ navigation }: Props) {
   const [studentId, setStudentId] = useState('');
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [cohortId, setCohortId] = useState<string | null>(null);
+  const [acceptedRules, setAcceptedRules] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const strength = useMemo(() => passwordStrength(password), [password]);
 
   useEffect(() => {
     listCohorts(null, true)
@@ -73,38 +89,71 @@ export default function RegisterScreen({ navigation }: Props) {
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.title}>Create account</Text>
 
+      <Text style={styles.label}>Full name</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, focusedField === 'name' && styles.inputFocused]}
         placeholder="Full name"
         placeholderTextColor={colors.textMuted}
+        textContentType="name"
+        autoComplete="name"
+        accessibilityLabel="Full name"
         value={fullName}
         onChangeText={setFullName}
+        onFocus={() => setFocusedField('name')}
+        onBlur={() => setFocusedField(null)}
       />
+      <Text style={styles.label}>Email</Text>
       <TextInput
-        style={styles.input}
-        placeholder="Email"
+        style={[styles.input, focusedField === 'email' && styles.inputFocused]}
+        placeholder="you@knust.edu.gh"
         placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         keyboardType="email-address"
+        textContentType="emailAddress"
+        autoComplete="email"
+        accessibilityLabel="Email"
         value={email}
         onChangeText={setEmail}
+        onFocus={() => setFocusedField('email')}
+        onBlur={() => setFocusedField(null)}
       />
+      <Text style={styles.label}>Password</Text>
       <TextInput
-        style={styles.input}
-        placeholder="Password (min 8 characters)"
+        style={[styles.input, focusedField === 'password' && styles.inputFocused]}
+        placeholder="Min 8 characters"
         placeholderTextColor={colors.textMuted}
         secureTextEntry
+        textContentType="newPassword"
+        autoComplete="password-new"
+        accessibilityLabel="Password"
         value={password}
         onChangeText={setPassword}
+        onFocus={() => setFocusedField('password')}
+        onBlur={() => setFocusedField(null)}
       />
+      {password.length > 0 ? (
+        <View style={styles.strengthRow} accessibilityLabel={`Password strength: ${strength} of 3`}>
+          {[0, 1, 2].map((i) => (
+            <View
+              key={i}
+              style={[
+                styles.strengthBar,
+                i < strength && (strength === 1 ? styles.strengthWeak : strength === 2 ? styles.strengthOk : styles.strengthGood),
+              ]}
+            />
+          ))}
+        </View>
+      ) : null}
 
       <Text style={styles.label}>Role</Text>
       <View style={styles.roleRow}>
         {ROLES.map((r) => (
           <Pressable
             key={r}
-            style={[styles.roleChip, role === r && styles.roleChipSelected]}
+            style={({ pressed }) => [styles.roleChip, role === r && styles.roleChipSelected, pressed && styles.roleChipPressed]}
             onPress={() => setRole(r)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: role === r }}
           >
             <Text style={[styles.roleChipText, role === r && styles.roleChipTextSelected]}>{r}</Text>
           </Pressable>
@@ -113,6 +162,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
       {role === 'student' ? (
         <>
+          <Text style={styles.label}>Index number</Text>
           <TextInput
             style={styles.input}
             placeholder="Index number"
@@ -120,13 +170,16 @@ export default function RegisterScreen({ navigation }: Props) {
             value={indexNumber}
             onChangeText={setIndexNumber}
             keyboardType="numeric"
+            accessibilityLabel="Index number"
           />
+          <Text style={styles.label}>Student ID</Text>
           <TextInput
             style={styles.input}
             placeholder="Student ID"
             placeholderTextColor={colors.textMuted}
             value={studentId}
             onChangeText={setStudentId}
+            accessibilityLabel="Student ID"
           />
 
           <Text style={styles.label}>Cohort</Text>
@@ -137,8 +190,14 @@ export default function RegisterScreen({ navigation }: Props) {
               {cohorts.map((c) => (
                 <Pressable
                   key={c.id}
-                  style={[styles.roleChip, cohortId === c.id && styles.roleChipSelected]}
+                  style={({ pressed }) => [
+                    styles.roleChip,
+                    cohortId === c.id && styles.roleChipSelected,
+                    pressed && styles.roleChipPressed,
+                  ]}
                   onPress={() => setCohortId(c.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: cohortId === c.id }}
                 >
                   <Text style={[styles.roleChipText, cohortId === c.id && styles.roleChipTextSelected]}>
                     {c.name} ({c.year})
@@ -150,17 +209,35 @@ export default function RegisterScreen({ navigation }: Props) {
         </>
       ) : null}
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <Pressable style={styles.button} onPress={onSubmit} disabled={submitting}>
-        {submitting ? (
-          <ActivityIndicator color={colors.textOnPrimary} />
-        ) : (
-          <Text style={styles.buttonText}>Register</Text>
-        )}
+      <Pressable
+        style={styles.consentRow}
+        onPress={() => setAcceptedRules((v) => !v)}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: acceptedRules }}
+        accessibilityLabel="I accept the programme rules and academic integrity policy"
+      >
+        <View style={[styles.checkbox, acceptedRules && styles.checkboxChecked]}>
+          {acceptedRules ? <Feather name="check" size={14} color={colors.textOnPrimary} /> : null}
+        </View>
+        <Text style={styles.consentText}>I accept the programme rules and academic integrity policy.</Text>
       </Pressable>
 
-      <Pressable onPress={() => navigation.navigate('Login')}>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Button
+        label="Create account"
+        onPress={onSubmit}
+        loading={submitting}
+        disabled={!acceptedRules}
+        style={styles.button}
+      />
+
+      <Pressable
+        onPress={() => navigation.navigate('Login')}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Already have an account? Log in"
+      >
         <Text style={styles.link}>Already have an account? Log in</Text>
       </Pressable>
     </ScrollView>
@@ -181,23 +258,45 @@ function createStyles(colors: Colors) {
     },
     title: {
       ...typography.heading,
-      fontSize: 28,
+      fontSize: 30,
       textAlign: 'center',
-      marginBottom: spacing.xxl,
-      color: colors.primaryForeground,
+      marginBottom: spacing.xl,
+      color: colors.text,
     },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.md,
+      borderRadius: radius.xl,
       padding: spacing.md,
+      minHeight: 44,
       fontSize: 16,
       backgroundColor: colors.surface,
     },
+    inputFocused: { borderColor: colors.primary, borderWidth: 2 },
+    strengthRow: { flexDirection: 'row', gap: spacing.xs, marginTop: -spacing.xs },
+    strengthBar: { flex: 1, height: 5, borderRadius: radius.pill, backgroundColor: colors.border },
+    strengthWeak: { backgroundColor: colors.danger },
+    strengthOk: { backgroundColor: colors.accents.amber.accent },
+    strengthGood: { backgroundColor: colors.accents.green.accent },
+    consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.sm, minHeight: 44 },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: radius.sm,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 2,
+    },
+    checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+    consentText: { ...typography.caption, color: colors.textMuted, flex: 1 },
     label: { ...typography.body, fontWeight: '600', color: colors.text, marginTop: spacing.xs },
     hint: { ...typography.caption, color: colors.textMuted },
     roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     roleChip: {
+      minHeight: 44,
+      justifyContent: 'center',
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.pill,
@@ -205,16 +304,18 @@ function createStyles(colors: Colors) {
       paddingHorizontal: spacing.lg,
     },
     roleChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    roleChipPressed: { opacity: 0.8 },
     roleChipText: { color: colors.text, textTransform: 'capitalize' },
     roleChipTextSelected: { color: colors.textOnPrimary },
     button: {
-      backgroundColor: colors.primary,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      alignItems: 'center',
       marginTop: spacing.sm,
+      borderRadius: radius.xxxl,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.32,
+      shadowRadius: 16,
+      elevation: 8,
     },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
     error: { color: colors.danger },
     link: { color: colors.primary, textAlign: 'center', marginTop: spacing.lg, fontWeight: '600' },
   });

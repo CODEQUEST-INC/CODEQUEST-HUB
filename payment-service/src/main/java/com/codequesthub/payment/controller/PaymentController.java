@@ -47,6 +47,13 @@ public class PaymentController {
         return ResponseEntity.ok(Map.of("data", paymentService.getCohortPaymentStatuses(cohortId)));
     }
 
+    // admin — sitewide fee collection summary, backs the Admin Hub's overview card
+    @GetMapping("/admin/summary")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> adminSummary() {
+        return ResponseEntity.ok(Map.of("data", paymentService.getAdminSummary()));
+    }
+
     // student — must be a member of the group being paid for
     @PostMapping("/initialize")
     @PreAuthorize("hasRole('student')")
@@ -69,12 +76,27 @@ public class PaymentController {
         return ResponseEntity.ok(Map.of("data", status));
     }
 
+    // the calling student's full payment attempt history for this group, newest first
+    @GetMapping("/mine/{groupId}/history")
+    public ResponseEntity<?> myHistory(@PathVariable UUID groupId, Authentication auth) {
+        UUID userId = UUID.fromString((String) auth.getPrincipal());
+        return ResponseEntity.ok(Map.of("data", paymentService.getMyPaymentHistory(groupId, userId)));
+    }
+
     // per-member breakdown for the group — any member, the group's supervisor, or admin
     @GetMapping("/group/{groupId}/summary")
     public ResponseEntity<?> groupSummary(@PathVariable UUID groupId, Authentication auth) {
         UUID userId = UUID.fromString((String) auth.getPrincipal());
         var summary = paymentService.getGroupPaymentSummary(groupId, userId, roleOf(auth));
         return ResponseEntity.ok(Map.of("data", summary));
+    }
+
+    // admin — notifies every unpaid member of the group (in-app + stubbed email)
+    @PostMapping("/group/{groupId}/remind")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> remind(@PathVariable UUID groupId) {
+        int remindedCount = paymentService.remindUnpaidMembers(groupId);
+        return ResponseEntity.ok(Map.of("data", Map.of("remindedCount", remindedCount)));
     }
 
     private String roleOf(Authentication auth) {

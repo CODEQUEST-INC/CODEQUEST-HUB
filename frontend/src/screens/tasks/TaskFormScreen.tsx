@@ -1,14 +1,17 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
+import Button from '../../components/Button';
+import DatePicker from '../../components/DatePicker';
 import { getMyGroup, GroupMember } from '../../api/groups';
 import { assignTask, createTask, deleteTask, updateTask } from '../../api/tasks';
 import { useAuth } from '../../auth/AuthContext';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { TaskStackParamList } from '../../navigation/types';
 import { Colors, radius, spacing, useTheme } from '../../theme';
+import { confirmAction } from '../../utils/confirm';
 
 type Props = NativeStackScreenProps<TaskStackParamList, 'TaskForm'>;
 
@@ -69,16 +72,23 @@ export default function TaskFormScreen({ route, navigation }: Props) {
     }
   };
 
-  const onDelete = async () => {
+  const onDelete = () => {
     if (!token || mode !== 'edit') return;
-    setSubmitting(true);
-    try {
-      await deleteTask(existing!.id, token);
-      navigation.navigate('TaskBoard');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete task');
-      setSubmitting(false);
-    }
+    confirmAction({
+      title: 'Delete task',
+      message: `Delete "${existing!.title}"? This can't be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setSubmitting(true);
+        try {
+          await deleteTask(existing!.id, token);
+          navigation.navigate('TaskBoard');
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Failed to delete task');
+          setSubmitting(false);
+        }
+      },
+    });
   };
 
   return (
@@ -103,27 +113,30 @@ export default function TaskFormScreen({ route, navigation }: Props) {
       />
 
       <Text style={styles.label}>Due date</Text>
-      <TextInput
-        style={styles.input}
-        value={dueDate}
-        onChangeText={setDueDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={colors.textMuted}
-      />
+      <DatePicker value={dueDate} onChange={setDueDate} placeholder="No due date" />
 
       <Text style={styles.label}>Assignee</Text>
       <View style={styles.chipRow}>
         <Pressable
-          style={[styles.chip, !assigneeId && styles.chipSelected]}
+          style={({ pressed }) => [styles.chip, !assigneeId && styles.chipSelected, pressed && styles.chipPressed]}
           onPress={() => setAssigneeId(null)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: !assigneeId }}
         >
           <Text style={[styles.chipText, !assigneeId && styles.chipTextSelected]}>Unassigned</Text>
         </Pressable>
         {members.map((m) => (
           <Pressable
             key={m.userId}
-            style={[styles.chip, assigneeId === m.userId && styles.chipSelected]}
+            style={({ pressed }) => [
+              styles.chip,
+              assigneeId === m.userId && styles.chipSelected,
+              pressed && styles.chipPressed,
+            ]}
             onPress={() => setAssigneeId(m.userId)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: assigneeId === m.userId }}
+            accessibilityLabel={`Assign to ${userLabel(m.userId, names)}`}
           >
             <Text style={[styles.chipText, assigneeId === m.userId && styles.chipTextSelected]} numberOfLines={1}>
               {userLabel(m.userId, names)}
@@ -134,18 +147,31 @@ export default function TaskFormScreen({ route, navigation }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Pressable style={styles.button} onPress={onSave} disabled={submitting}>
-        {submitting ? (
-          <ActivityIndicator color={colors.textOnPrimary} />
-        ) : (
-          <Text style={styles.buttonText}>Save task</Text>
-        )}
-      </Pressable>
+      <Button
+        label="Save task"
+        onPress={onSave}
+        loading={submitting}
+        style={[
+          styles.button,
+          {
+            borderRadius: radius.xxxl,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.3,
+            shadowRadius: 14,
+            elevation: 6,
+          },
+        ]}
+      />
 
       {mode === 'edit' ? (
-        <Pressable style={styles.deleteButton} onPress={onDelete} disabled={submitting}>
-          <Text style={styles.deleteButtonText}>Delete task</Text>
-        </Pressable>
+        <Button
+          label="Delete task"
+          onPress={onDelete}
+          disabled={submitting}
+          variant="dangerOutline"
+          style={styles.deleteButton}
+        />
       ) : null}
     </ScrollView>
   );
@@ -158,7 +184,7 @@ function createStyles(colors: Colors) {
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.md,
+      borderRadius: radius.xl,
       padding: spacing.md,
       fontSize: 16,
       backgroundColor: colors.surface,
@@ -166,6 +192,8 @@ function createStyles(colors: Colors) {
     multiline: { minHeight: 70, textAlignVertical: 'top' },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     chip: {
+      minHeight: 44,
+      justifyContent: 'center',
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.pill,
@@ -173,25 +201,11 @@ function createStyles(colors: Colors) {
       paddingHorizontal: spacing.lg,
     },
     chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipPressed: { opacity: 0.8 },
     chipText: { color: colors.text },
     chipTextSelected: { color: colors.textOnPrimary },
-    button: {
-      backgroundColor: colors.primary,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      alignItems: 'center',
-      marginTop: spacing.xl,
-    },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 16 },
-    deleteButton: {
-      borderWidth: 1,
-      borderColor: colors.danger,
-      borderRadius: radius.md,
-      padding: spacing.lg,
-      alignItems: 'center',
-      marginTop: spacing.md,
-    },
-    deleteButtonText: { color: colors.danger, fontWeight: '600' },
+    button: { marginTop: spacing.xl },
+    deleteButton: { marginTop: spacing.md },
     error: { color: colors.danger },
   });
 }

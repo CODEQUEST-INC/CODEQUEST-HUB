@@ -11,6 +11,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (req: authApi.RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -62,8 +63,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus('signedOut');
   };
 
+  const refreshUser = async () => {
+    if (!token) return;
+    const me = await authApi.me(token);
+    setUser(me);
+  };
+
   const value = useMemo(
-    () => ({ status, user, token, login, register, logout }),
+    () => ({ status, user, token, login, register, logout, refreshUser }),
     [status, user, token]
   );
 

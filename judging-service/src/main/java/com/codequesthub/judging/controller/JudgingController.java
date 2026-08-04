@@ -108,12 +108,19 @@ public class JudgingController {
         return ResponseEntity.ok(Map.of("data", scorecards));
     }
 
-    // ---- leaderboard (any authenticated user) ----
+    // ---- leaderboard (any authenticated user; admins see it unpublished too) ----
 
     @GetMapping("/leaderboard")
-    public ResponseEntity<?> getLeaderboard(@RequestParam UUID cohortId) {
-        List<LeaderboardEntry> leaderboard = judgingService.getLeaderboard(cohortId);
+    public ResponseEntity<?> getLeaderboard(@RequestParam UUID cohortId, Authentication auth) {
+        LeaderboardResponse leaderboard = judgingService.getLeaderboard(cohortId, "admin".equals(roleOf(auth)));
         return ResponseEntity.ok(Map.of("data", leaderboard));
+    }
+
+    @PostMapping("/leaderboard/publish")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> publishLeaderboard(@RequestParam UUID cohortId) {
+        judgingService.publishLeaderboard(cohortId);
+        return ResponseEntity.noContent().build();
     }
 
     private String roleOf(Authentication auth) {

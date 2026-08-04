@@ -9,6 +9,7 @@ import com.codequesthub.auth.repository.CohortViewRepository;
 import com.codequesthub.auth.repository.GroupMemberViewRepository;
 import com.codequesthub.auth.repository.GroupViewRepository;
 import com.codequesthub.auth.repository.JudgeViewRepository;
+import com.codequesthub.auth.repository.NotificationRepository;
 import com.codequesthub.auth.repository.PaymentRecordViewRepository;
 import com.codequesthub.auth.repository.ProposalVersionViewRepository;
 import com.codequesthub.auth.repository.ProposalViewRepository;
@@ -51,7 +52,10 @@ class AuthServiceTest {
     @Mock private JudgeViewRepository judgeViewRepo;
     @Mock private ScorecardViewRepository scorecardViewRepo;
     @Mock private PaymentRecordViewRepository paymentRecordViewRepo;
+    @Mock private NotificationRepository notificationRepo;
     @Mock private PasswordEncoder encoder;
+    @Mock private LoginRateLimiter rateLimiter;
+    @Mock private EmailService emailService;
 
     // encoder/jwtUtil aren't exercised by lookupUsers(), and JwtUtil is a concrete
     // class that Mockito's inline mock maker can't instrument on newer JDKs
@@ -59,7 +63,7 @@ class AuthServiceTest {
     private AuthService authService() {
         return new AuthService(userRepo, cohortViewRepo, groupMemberViewRepo, groupViewRepo, proposalViewRepo,
             proposalVersionViewRepo, taskViewRepo, showcaseEntryViewRepo, judgeViewRepo, scorecardViewRepo,
-            paymentRecordViewRepo, null, null);
+            paymentRecordViewRepo, notificationRepo, null, null, rateLimiter, emailService);
     }
 
     // register() calls encoder.encode() and jwtUtil.generateToken() — a real
@@ -68,7 +72,8 @@ class AuthServiceTest {
     private AuthService authServiceForRegister() {
         return new AuthService(userRepo, cohortViewRepo, groupMemberViewRepo, groupViewRepo, proposalViewRepo,
             proposalVersionViewRepo, taskViewRepo, showcaseEntryViewRepo, judgeViewRepo, scorecardViewRepo,
-            paymentRecordViewRepo, encoder, new JwtUtil("test-secret-key-32-characters-min", 3600000));
+            paymentRecordViewRepo, notificationRepo, encoder, new JwtUtil("test-secret-key-32-characters-min", 3600000),
+            rateLimiter, emailService);
     }
 
     private User userWith(UUID id, String fullName) {

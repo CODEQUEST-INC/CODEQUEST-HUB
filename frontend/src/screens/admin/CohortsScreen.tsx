@@ -1,8 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
+import Button from '../../components/Button';
 import { ApiError } from '../../api/client';
 import { Cohort, createCohort, deleteCohort, listCohorts, updateCohort } from '../../api/cohorts';
 import { useAuth } from '../../auth/AuthContext';
@@ -117,8 +118,10 @@ export default function CohortsScreen() {
 
       {cohorts.map((c, i) =>
         editingId === c.id ? (
-          <Card key={c.id}>
+          <Card key={c.id} style={styles.card}>
+            <Text style={styles.fieldLabel}>Name</Text>
             <TextInput style={styles.input} value={editName} onChangeText={setEditName} placeholder="Name" />
+            <Text style={styles.fieldLabel}>Year</Text>
             <TextInput
               style={styles.input}
               value={editYear}
@@ -131,45 +134,42 @@ export default function CohortsScreen() {
               <Switch value={editActive} onValueChange={setEditActive} trackColor={{ true: colors.primary }} />
             </View>
             <View style={styles.rowButtons}>
-              <Pressable style={styles.smallButton} onPress={onSaveEdit}>
-                <Text style={styles.smallButtonText}>Save</Text>
-              </Pressable>
-              <Pressable style={styles.smallSecondaryButton} onPress={() => setEditingId(null)}>
-                <Text style={styles.smallSecondaryButtonText}>Cancel</Text>
-              </Pressable>
+              <Button label="Save" onPress={onSaveEdit} size="sm" accessibilityLabel="Save cohort" />
+              <Button
+                label="Cancel"
+                onPress={() => setEditingId(null)}
+                size="sm"
+                variant="secondary"
+                accessibilityLabel="Cancel editing"
+              />
             </View>
           </Card>
         ) : (
-          <Card key={c.id} tint={accentList[i % accentList.length]}>
+          <Card key={c.id} tint={accentList[i % accentList.length]} style={styles.card}>
             <Text style={styles.cardTitle}>
               {c.name} ({c.year}) {!c.active ? '· inactive' : ''}
             </Text>
             <View style={styles.rowButtons}>
-              <Pressable style={styles.smallButton} onPress={() => startEdit(c)}>
-                <Text style={styles.smallButtonText}>Edit</Text>
-              </Pressable>
-              <Pressable
-                style={styles.smallDangerButton}
+              <Button label="Edit" onPress={() => startEdit(c)} size="sm" accessibilityLabel={`Edit ${c.name}`} />
+              <Button
+                label={confirmingDeleteId === c.id ? 'Tap again to confirm' : 'Delete'}
                 onPress={() => onDelete(c.id)}
-                disabled={deletingId === c.id}
-              >
-                {deletingId === c.id ? (
-                  <ActivityIndicator size="small" color={colors.danger} />
-                ) : (
-                  <Text style={styles.smallDangerButtonText}>
-                    {confirmingDeleteId === c.id ? 'Tap again to confirm' : 'Delete'}
-                  </Text>
-                )}
-              </Pressable>
+                size="sm"
+                variant="dangerOutline"
+                loading={deletingId === c.id}
+                accessibilityLabel={confirmingDeleteId === c.id ? 'Tap again to confirm delete' : `Delete ${c.name}`}
+              />
             </View>
           </Card>
         )
       )}
       {cohorts.length === 0 && !loading ? <Text style={styles.emptyText}>No cohorts yet.</Text> : null}
 
-      <Card>
+      <Card style={styles.card}>
         <Text style={styles.cardTitle}>Add cohort</Text>
+        <Text style={styles.fieldLabel}>Name</Text>
         <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder="Name (e.g. CodeQuest 2026)" />
+        <Text style={styles.fieldLabel}>Year</Text>
         <TextInput
           style={styles.input}
           value={newYear}
@@ -177,9 +177,7 @@ export default function CohortsScreen() {
           placeholder="Year"
           keyboardType="numeric"
         />
-        <Pressable style={styles.button} onPress={onCreate}>
-          <Text style={styles.buttonText}>Add</Text>
-        </Pressable>
+        <Button label="Add" onPress={onCreate} style={styles.button} accessibilityLabel="Add cohort" />
       </Card>
     </ScrollView>
   );
@@ -188,45 +186,21 @@ export default function CohortsScreen() {
 function createStyles(colors: Colors) {
   return StyleSheet.create({
     container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    card: { borderRadius: radius.xxl },
     cardTitle: { ...typography.body, fontWeight: '600' },
+    fieldLabel: { ...typography.label, color: colors.textMuted },
     body: { ...typography.body },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.sm,
+      borderRadius: radius.xl,
       padding: spacing.md,
       fontSize: 15,
       backgroundColor: colors.surface,
     },
     switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     rowButtons: { flexDirection: 'row', gap: spacing.sm },
-    button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
-    smallButton: {
-      backgroundColor: colors.primary,
-      borderRadius: radius.sm,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
-      alignSelf: 'flex-start',
-    },
-    smallButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 13 },
-    smallSecondaryButton: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.sm,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
-    },
-    smallSecondaryButtonText: { color: colors.text, fontWeight: '600', fontSize: 13 },
-    smallDangerButton: {
-      borderWidth: 1,
-      borderColor: colors.danger,
-      borderRadius: radius.sm,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
-      alignSelf: 'flex-start',
-    },
-    smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
+    button: { marginTop: spacing.xs },
     emptyText: { color: colors.textMuted, textAlign: 'center' },
     error: { color: colors.danger },
   });

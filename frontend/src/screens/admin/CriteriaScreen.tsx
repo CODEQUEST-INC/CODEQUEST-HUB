@@ -1,8 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
+import Button from '../../components/Button';
 import { ApiError } from '../../api/client';
 import { createCriterion, deleteCriterion, JudgingCriterion, listCriteria, updateCriterion } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
@@ -27,6 +28,7 @@ export default function CriteriaScreen() {
   const [editName, setEditName] = useState('');
   const [editWeight, setEditWeight] = useState('');
   const [editActive, setEditActive] = useState(true);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   // Guards against an in-flight request for a since-abandoned cohort
   // resolving after a newer one and clobbering it with stale data.
@@ -99,6 +101,12 @@ export default function CriteriaScreen() {
 
   const onDelete = async (id: string) => {
     if (!token) return;
+    if (confirmingDeleteId !== id) {
+      setConfirmingDeleteId(id);
+      setTimeout(() => setConfirmingDeleteId((current) => (current === id ? null : current)), 4000);
+      return;
+    }
+    setConfirmingDeleteId(null);
     setError(null);
     try {
       await deleteCriterion(id, token);
@@ -112,17 +120,27 @@ export default function CriteriaScreen() {
     }
   };
 
+  const activeWeightTotal = criteria.filter((c) => c.active).reduce((sum, c) => sum + c.weight, 0);
+  const weightMismatch = criteria.some((c) => c.active) && activeWeightTotal !== 100;
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {weightMismatch ? (
+        <Text style={styles.warning}>
+          Active criteria weights add up to {activeWeightTotal}%, not 100% — scores may not total correctly.
+        </Text>
+      ) : null}
 
       {criteria.map((c, i) =>
         editingId === c.id ? (
-          <Card key={c.id}>
+          <Card key={c.id} style={styles.card}>
+            <Text style={styles.fieldLabel}>Name</Text>
             <TextInput style={styles.input} value={editName} onChangeText={setEditName} placeholder="Name" />
+            <Text style={styles.fieldLabel}>Weight</Text>
             <TextInput
               style={styles.input}
               value={editWeight}
@@ -135,16 +153,18 @@ export default function CriteriaScreen() {
               <Switch value={editActive} onValueChange={setEditActive} trackColor={{ true: colors.primary }} />
             </View>
             <View style={styles.rowButtons}>
-              <Pressable style={styles.smallButton} onPress={onSaveEdit}>
-                <Text style={styles.smallButtonText}>Save</Text>
-              </Pressable>
-              <Pressable style={styles.smallSecondaryButton} onPress={() => setEditingId(null)}>
-                <Text style={styles.smallSecondaryButtonText}>Cancel</Text>
-              </Pressable>
+              <Button label="Save" onPress={onSaveEdit} size="sm" accessibilityLabel="Save criterion" />
+              <Button
+                label="Cancel"
+                onPress={() => setEditingId(null)}
+                size="sm"
+                variant="secondary"
+                accessibilityLabel="Cancel editing"
+              />
             </View>
           </Card>
         ) : (
-          <Card key={c.id} tint={accentList[i % accentList.length]}>
+          <Card key={c.id} tint={accentList[i % accentList.length]} style={styles.card}>
             <Text style={styles.cardTitle}>
               {c.name} {!c.active ? '(retired)' : ''}
             </Text>
@@ -154,20 +174,24 @@ export default function CriteriaScreen() {
             />
             <Text style={styles.cardMeta}>{c.weight}% of the total score</Text>
             <View style={styles.rowButtons}>
-              <Pressable style={styles.smallButton} onPress={() => startEdit(c)}>
-                <Text style={styles.smallButtonText}>Edit</Text>
-              </Pressable>
-              <Pressable style={styles.smallDangerButton} onPress={() => onDelete(c.id)}>
-                <Text style={styles.smallDangerButtonText}>Delete</Text>
-              </Pressable>
+              <Button label="Edit" onPress={() => startEdit(c)} size="sm" accessibilityLabel={`Edit ${c.name}`} />
+              <Button
+                label={confirmingDeleteId === c.id ? 'Tap again to confirm' : 'Delete'}
+                onPress={() => onDelete(c.id)}
+                size="sm"
+                variant="dangerOutline"
+                accessibilityLabel={confirmingDeleteId === c.id ? 'Tap again to confirm delete' : `Delete ${c.name}`}
+              />
             </View>
           </Card>
         )
       )}
 
-      <Card>
+      <Card style={styles.card}>
         <Text style={styles.cardTitle}>Add criterion</Text>
+        <Text style={styles.fieldLabel}>Name</Text>
         <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder="Name" />
+        <Text style={styles.fieldLabel}>Weight</Text>
         <TextInput
           style={styles.input}
           value={newWeight}
@@ -175,9 +199,7 @@ export default function CriteriaScreen() {
           placeholder="Weight (0-100)"
           keyboardType="numeric"
         />
-        <Pressable style={styles.button} onPress={onCreate}>
-          <Text style={styles.buttonText}>Add</Text>
-        </Pressable>
+        <Button label="Add" onPress={onCreate} style={styles.button} accessibilityLabel="Add criterion" />
       </Card>
     </ScrollView>
   );
@@ -186,44 +208,29 @@ export default function CriteriaScreen() {
 function createStyles(colors: Colors) {
   return StyleSheet.create({
     container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    card: { borderRadius: radius.xxl },
     cardTitle: { ...typography.body, fontWeight: '600' },
     cardMeta: { ...typography.caption, color: colors.textMuted },
+    fieldLabel: { ...typography.label, color: colors.textMuted },
     body: { ...typography.body },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.sm,
+      borderRadius: radius.xl,
       padding: spacing.md,
       fontSize: 15,
       backgroundColor: colors.surface,
     },
     switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     rowButtons: { flexDirection: 'row', gap: spacing.sm },
-    button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
-    smallButton: {
-      backgroundColor: colors.primary,
+    button: { marginTop: spacing.xs },
+    warning: {
+      ...typography.caption,
+      color: colors.accents.amber.fg,
+      backgroundColor: colors.accents.amber.tint,
+      padding: spacing.md,
       borderRadius: radius.sm,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
     },
-    smallButtonText: { color: colors.textOnPrimary, fontWeight: '600', fontSize: 13 },
-    smallSecondaryButton: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radius.sm,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
-    },
-    smallSecondaryButtonText: { color: colors.text, fontWeight: '600', fontSize: 13 },
-    smallDangerButton: {
-      borderWidth: 1,
-      borderColor: colors.danger,
-      borderRadius: radius.sm,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
-    },
-    smallDangerButtonText: { color: colors.danger, fontWeight: '600', fontSize: 13 },
     error: { color: colors.danger },
   });
 }

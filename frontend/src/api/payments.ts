@@ -87,3 +87,21 @@ export function getMyPaymentStatus(groupId: string, token: string): Promise<Paym
 export function getGroupPaymentSummary(groupId: string, token: string): Promise<GroupPaymentSummary> {
   return request<GroupPaymentSummary>(`/api/payments/group/${groupId}/summary`, { token });
 }
+
+export function getMyPaymentHistory(groupId: string, token: string): Promise<PaymentRecord[]> {
+  return request<PaymentRecord[]>(`/api/payments/mine/${groupId}/history`, { token });
+}
+
+export function remindUnpaidMembers(groupId: string, token: string): Promise<{ remindedCount: number }> {
+  return request<{ remindedCount: number }>(`/api/payments/group/${groupId}/remind`, { method: 'POST', token });
+}
+
+export interface PaymentSummary {
+  collectedPesewas: number;
+  expectedPesewas: number;
+  outstandingCount: number;
+}
+
+export function getAdminPaymentSummary(token: string): Promise<PaymentSummary> {
+  return request<PaymentSummary>('/api/payments/admin/summary', { token });
+}

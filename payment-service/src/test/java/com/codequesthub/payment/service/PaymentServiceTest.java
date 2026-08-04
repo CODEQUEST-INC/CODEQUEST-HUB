@@ -35,6 +35,8 @@ class PaymentServiceTest {
     @Mock private GroupMemberRepository memberRepo;
     @Mock private GroupViewRepository groupViewRepo;
     @Mock private UserViewRepository userViewRepo;
+    @Mock private NotificationViewRepository notificationViewRepo;
+    @Mock private EmailService emailService;
 
     private RestTemplate restTemplate;
     private MockRestServiceServer mockServer;
@@ -47,7 +49,7 @@ class PaymentServiceTest {
 
     private PaymentService service() {
         return new PaymentService(feeConfigRepo, recordRepo, memberRepo, groupViewRepo, userViewRepo,
-            restTemplate, "sk_test_secret", "https://api.paystack.co");
+            notificationViewRepo, emailService, restTemplate, "sk_test_secret", "https://api.paystack.co");
     }
 
     private GroupView groupWith(UUID id, UUID cohortId) {

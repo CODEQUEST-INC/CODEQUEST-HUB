@@ -93,6 +93,13 @@ public class ProposalController {
         return ResponseEntity.ok(Map.of("data", p));
     }
 
+    // Admin — sitewide count of proposals awaiting review, for the Admin Hub overview
+    @GetMapping("/admin/pending-count")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> pendingReviewCount() {
+        return ResponseEntity.ok(Map.of("data", Map.of("pendingCount", proposalService.getPendingReviewCount())));
+    }
+
     // Any authenticated user (students only own group): version history
     @GetMapping("/{proposalId}/history")
     public ResponseEntity<?> getHistory(@PathVariable UUID proposalId,

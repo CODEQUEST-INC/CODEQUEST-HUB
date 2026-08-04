@@ -12,6 +12,7 @@ public class UserResponse {
     private String studentId;
     private String indexNumber;
     private UUID cohortId;
+    private OffsetDateTime emailVerifiedAt;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -24,6 +25,7 @@ public class UserResponse {
         r.studentId = u.getStudentId();
         r.indexNumber = u.getIndexNumber();
         r.cohortId = u.getCohortId();
+        r.emailVerifiedAt = u.getEmailVerifiedAt();
         r.createdAt = u.getCreatedAt();
         r.updatedAt = u.getUpdatedAt();
         return r;
@@ -36,6 +38,7 @@ public class UserResponse {
     public String getStudentId() { return studentId; }
     public String getIndexNumber() { return indexNumber; }
     public UUID getCohortId() { return cohortId; }
+    public OffsetDateTime getEmailVerifiedAt() { return emailVerifiedAt; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

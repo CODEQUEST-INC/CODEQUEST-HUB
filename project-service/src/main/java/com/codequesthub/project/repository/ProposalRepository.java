@@ -1,6 +1,7 @@
 package com.codequesthub.project.repository;
 
 import com.codequesthub.project.entity.Proposal;
+import com.codequesthub.project.entity.ProposalStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +12,8 @@ import java.util.UUID;
 
 public interface ProposalRepository extends JpaRepository<Proposal, UUID> {
     Optional<Proposal> findByGroupId(UUID groupId);
+
+    long countByStatusIn(List<ProposalStatus> statuses);
 
     @Query(value = """
         SELECT p.* FROM proposals p

@@ -13,6 +13,8 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+    long countByRole(UserRole role);
+    Optional<User> findByResetToken(String resetToken);
 
     // Caller passes a capped Pageable (e.g. top 20) — this backs an admin-facing
     // type-ahead picker, not a full directory browse.

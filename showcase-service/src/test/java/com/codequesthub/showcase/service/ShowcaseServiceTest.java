@@ -6,9 +6,12 @@ import com.codequesthub.showcase.entity.ProposalStatus;
 import com.codequesthub.showcase.entity.ProposalView;
 import com.codequesthub.showcase.entity.ShowcaseEntry;
 import com.codequesthub.showcase.entity.ShowcasePhoto;
+import com.codequesthub.showcase.repository.CohortViewRepository;
 import com.codequesthub.showcase.repository.GroupMemberRepository;
 import com.codequesthub.showcase.repository.GroupViewRepository;
+import com.codequesthub.showcase.repository.JudgingCriterionViewRepository;
 import com.codequesthub.showcase.repository.ProposalViewRepository;
+import com.codequesthub.showcase.repository.ScorecardViewRepository;
 import com.codequesthub.showcase.repository.ShowcaseEntryRepository;
 import com.codequesthub.showcase.repository.ShowcasePhotoRepository;
 import org.junit.jupiter.api.Test;
@@ -38,12 +41,16 @@ class ShowcaseServiceTest {
     @Mock private GroupViewRepository groupViewRepo;
     @Mock private GroupMemberRepository memberRepo;
     @Mock private ProposalViewRepository proposalViewRepo;
+    @Mock private CohortViewRepository cohortViewRepo;
+    @Mock private JudgingCriterionViewRepository criterionViewRepo;
+    @Mock private ScorecardViewRepository scorecardViewRepo;
 
     @TempDir
     Path uploadDir;
 
     private ShowcaseService service() {
-        return new ShowcaseService(entryRepo, photoRepo, groupViewRepo, memberRepo, proposalViewRepo, uploadDir.toString());
+        return new ShowcaseService(entryRepo, photoRepo, groupViewRepo, memberRepo, proposalViewRepo,
+            cohortViewRepo, criterionViewRepo, scorecardViewRepo, uploadDir.toString());
     }
 
     private ProposalView proposalWith(UUID groupId, ProposalStatus status) {

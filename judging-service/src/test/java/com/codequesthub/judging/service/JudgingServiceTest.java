@@ -4,6 +4,7 @@ import com.codequesthub.judging.dto.CreateCriterionRequest;
 import com.codequesthub.judging.dto.ScoreEntry;
 import com.codequesthub.judging.dto.SubmitScorecardRequest;
 import com.codequesthub.judging.dto.UpdateCriterionRequest;
+import com.codequesthub.judging.entity.CohortView;
 import com.codequesthub.judging.entity.GroupView;
 import com.codequesthub.judging.entity.JudgingCriterion;
 import com.codequesthub.judging.entity.Scorecard;
@@ -42,6 +43,12 @@ class JudgingServiceTest {
 
     private JudgingService service() {
         return new JudgingService(criteriaRepo, judgeRepo, scorecardRepo, scoreRepo, groupViewRepo, cohortViewRepo);
+    }
+
+    private CohortView cohortViewWith(UUID id) {
+        CohortView c = new CohortView();
+        ReflectionTestUtils.setField(c, "id", id);
+        return c;
     }
 
     private JudgingCriterion criterionWith(UUID id, UUID cohortId, BigDecimal weight, boolean active) {
@@ -147,8 +154,9 @@ class JudgingServiceTest {
 
         when(scorecardRepo.findByGroupIdIn(any()))
             .thenReturn(List.of(scorecardA, scorecardC1, scorecardC2));
+        when(cohortViewRepo.findById(cohortId)).thenReturn(java.util.Optional.of(cohortViewWith(cohortId)));
 
-        var entries = service().getLeaderboard(cohortId);
+        var entries = service().getLeaderboard(cohortId, true).getEntries();
 
         assertThat(entries).hasSize(3);
         assertThat(entries.get(0).getGroupId()).isEqualTo(groupCId);
@@ -178,8 +186,9 @@ class JudgingServiceTest {
         when(groupViewRepo.findByCohortId(cohortId)).thenReturn(List.of(groupWithPhoto, groupWithoutPhoto));
         when(criteriaRepo.findByCohortId(cohortId)).thenReturn(List.of());
         when(scorecardRepo.findByGroupIdIn(any())).thenReturn(List.of());
+        when(cohortViewRepo.findById(cohortId)).thenReturn(java.util.Optional.of(cohortViewWith(cohortId)));
 
-        var entries = service().getLeaderboard(cohortId);
+        var entries = service().getLeaderboard(cohortId, true).getEntries();
 
         var withPhoto = entries.stream().filter(e -> e.getGroupId().equals(groupWithPhotoId)).findFirst().orElseThrow();
         var withoutPhoto = entries.stream().filter(e -> e.getGroupId().equals(groupWithoutPhotoId)).findFirst().orElseThrow();

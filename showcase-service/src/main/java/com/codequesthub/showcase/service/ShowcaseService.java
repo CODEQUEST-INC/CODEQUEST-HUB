@@ -11,9 +11,13 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +41,9 @@ public class ShowcaseService {
     private final GroupViewRepository groupViewRepo;
     private final GroupMemberRepository memberRepo;
     private final ProposalViewRepository proposalViewRepo;
+    private final CohortViewRepository cohortViewRepo;
+    private final JudgingCriterionViewRepository criterionViewRepo;
+    private final ScorecardViewRepository scorecardViewRepo;
     private final Path uploadDir;
 
     public ShowcaseService(ShowcaseEntryRepository entryRepo,
@@ -44,12 +51,18 @@ public class ShowcaseService {
                             GroupViewRepository groupViewRepo,
                             GroupMemberRepository memberRepo,
                             ProposalViewRepository proposalViewRepo,
+                            CohortViewRepository cohortViewRepo,
+                            JudgingCriterionViewRepository criterionViewRepo,
+                            ScorecardViewRepository scorecardViewRepo,
                             @Value("${showcase.upload-dir}") String uploadDir) {
         this.entryRepo = entryRepo;
         this.photoRepo = photoRepo;
         this.groupViewRepo = groupViewRepo;
         this.memberRepo = memberRepo;
         this.proposalViewRepo = proposalViewRepo;
+        this.cohortViewRepo = cohortViewRepo;
+        this.criterionViewRepo = criterionViewRepo;
+        this.scorecardViewRepo = scorecardViewRepo;
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.uploadDir);
@@ -116,6 +129,38 @@ public class ShowcaseService {
         return toResponse(entry, group);
     }
 
+    // Swaps the given photo into position 0 (the gallery/detail-screen cover),
+    // demoting whatever was previously first to the position it vacates —
+    // non-destructive, unlike delete-then-re-add.
+    @Transactional
+    public ShowcaseEntryResponse setCoverPhoto(UUID groupId, UUID userId, UUID photoId) {
+        GroupView group = checkMemberAndApproved(groupId, userId);
+
+        ShowcaseEntry entry = entryRepo.findByGroupId(groupId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No showcase entry for this group"));
+
+        ShowcasePhoto target = photoRepo.findById(photoId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found"));
+        if (!target.getEntryId().equals(entry.getId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found");
+        }
+
+        int targetPosition = target.getPosition();
+        if (targetPosition != 0) {
+            photoRepo.findByEntryIdOrderByPositionAsc(entry.getId()).stream()
+                .filter(p -> p.getPosition() == 0)
+                .findFirst()
+                .ifPresent(currentCover -> {
+                    currentCover.setPosition(targetPosition);
+                    photoRepo.save(currentCover);
+                });
+            target.setPosition(0);
+            photoRepo.save(target);
+        }
+
+        return toResponse(entry, group);
+    }
+
     @Transactional
     public ShowcaseEntryResponse deletePhoto(UUID groupId, UUID userId, UUID photoId) {
         GroupView group = checkMemberAndApproved(groupId, userId);
@@ -154,6 +199,63 @@ public class ShowcaseService {
         return toResponse(entry, group);
     }
 
+    // score/rank are null unless the entry's cohort has published its leaderboard —
+    // showing a group's public rank before results are official would undercut the
+    // point of publish/draft state.
+    private record GroupScore(BigDecimal average, int rank) {}
+
+    private Map<UUID, GroupScore> computeRanksForCohort(UUID cohortId) {
+        CohortView cohort = cohortViewRepo.findById(cohortId).orElse(null);
+        if (cohort == null || cohort.getLeaderboardPublishedAt() == null) {
+            return Map.of();
+        }
+
+        List<GroupView> groups = groupViewRepo.findByCohortId(cohortId);
+        if (groups.isEmpty()) return Map.of();
+
+        Map<UUID, BigDecimal> weightByCriterion = criterionViewRepo.findByCohortId(cohortId).stream()
+            .collect(Collectors.toMap(JudgingCriterionView::getId, JudgingCriterionView::getWeight));
+
+        List<UUID> groupIds = groups.stream().map(GroupView::getId).toList();
+        Map<UUID, List<ScorecardView>> scorecardsByGroup = scorecardViewRepo.findByGroupIdIn(groupIds).stream()
+            .collect(Collectors.groupingBy(ScorecardView::getGroupId));
+
+        record Scored(UUID groupId, BigDecimal average) {}
+        List<Scored> scored = groups.stream()
+            .map(g -> {
+                List<ScorecardView> cards = scorecardsByGroup.getOrDefault(g.getId(), List.of());
+                List<BigDecimal> sums = cards.stream().map(sc -> weightedSumOf(sc, weightByCriterion)).toList();
+                BigDecimal average = sums.isEmpty() ? null : sums.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(sums.size()), 2, RoundingMode.HALF_UP);
+                return new Scored(g.getId(), average);
+            })
+            .sorted(Comparator.comparing(Scored::average, Comparator.nullsLast(Comparator.reverseOrder())))
+            .toList();
+
+        Map<UUID, GroupScore> ranks = new HashMap<>();
+        int rank = 0;
+        for (Scored s : scored) {
+            if (s.average() == null) continue; // ungraded groups get no rank
+            rank++;
+            ranks.put(s.groupId(), new GroupScore(s.average(), rank));
+        }
+        return ranks;
+    }
+
+    // weighted sum = sum(score * weight / 100) across the scorecard's criteria — mirrors
+    // JudgingService.weightedSumOf in judging-service exactly, since this is a read-only
+    // view into the same tables and must agree with the real leaderboard.
+    private BigDecimal weightedSumOf(ScorecardView scorecard, Map<UUID, BigDecimal> weightByCriterion) {
+        return scorecard.getScores().stream()
+            .map(score -> {
+                BigDecimal weight = weightByCriterion.getOrDefault(score.getCriterionId(), BigDecimal.ZERO);
+                return BigDecimal.valueOf(score.getScore())
+                    .multiply(weight)
+                    .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+            })
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     @Transactional
     public void deleteEntry(UUID groupId, UUID userId, String role) {
         if (!"admin".equals(role) && !memberRepo.existsByGroupIdAndUserId(groupId, userId)) {
@@ -185,13 +287,20 @@ public class ShowcaseService {
         Map<UUID, List<ShowcasePhoto>> photosByEntry = photoRepo.findByEntryIdInOrderByPositionAsc(entryIds).stream()
             .collect(Collectors.groupingBy(ShowcasePhoto::getEntryId));
 
+        Map<UUID, Map<UUID, GroupScore>> ranksByCohort = entries.stream()
+            .map(ShowcaseEntry::getCohortId).distinct()
+            .collect(Collectors.toMap(c -> c, this::computeRanksForCohort));
+
         return entries.stream()
             .map(e -> {
                 GroupView group = groupsById.get(e.getGroupId());
+                GroupScore score = ranksByCohort.getOrDefault(e.getCohortId(), Map.of()).get(e.getGroupId());
                 return new ShowcaseEntryResponse(e,
                     group == null ? null : group.getGroupNumber(),
                     group == null ? null : group.getName(),
-                    photosByEntry.getOrDefault(e.getId(), List.of()));
+                    photosByEntry.getOrDefault(e.getId(), List.of()),
+                    score == null ? null : score.average(),
+                    score == null ? null : score.rank());
             })
             .toList();
     }
@@ -222,9 +331,12 @@ public class ShowcaseService {
 
     private ShowcaseEntryResponse toResponse(ShowcaseEntry entry, GroupView group) {
         List<ShowcasePhoto> photos = photoRepo.findByEntryIdOrderByPositionAsc(entry.getId());
+        GroupScore score = computeRanksForCohort(entry.getCohortId()).get(entry.getGroupId());
         return new ShowcaseEntryResponse(entry,
             group == null ? null : group.getGroupNumber(),
             group == null ? null : group.getName(),
-            photos);
+            photos,
+            score == null ? null : score.average(),
+            score == null ? null : score.rank());
     }
 }

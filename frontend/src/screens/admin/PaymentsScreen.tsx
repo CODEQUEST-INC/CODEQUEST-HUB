@@ -9,14 +9,17 @@ import {
   getCohortPaymentStatuses,
   getFeeConfig,
   PaymentFeeConfig,
+  remindUnpaidMembers,
   setFeeConfig,
 } from '../../api/payments';
 import { useAuth } from '../../auth/AuthContext';
+import Button from '../../components/Button';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import PaidBadge from '../../components/PaidBadge';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
+import { confirmAction } from '../../utils/confirm';
 
 export default function PaymentsScreen() {
   const { token } = useAuth();
@@ -30,6 +33,8 @@ export default function PaymentsScreen() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [remindingGroupId, setRemindingGroupId] = useState<string | null>(null);
+  const [reminded, setReminded] = useState<Record<string, number>>({});
 
   const allMemberIds = statuses.flatMap((s) => s.members.map((m) => m.userId));
   const names = useUserNames(allMemberIds);
@@ -68,6 +73,8 @@ export default function PaymentsScreen() {
     }, [load])
   );
 
+  const someAlreadyPaid = statuses.some((s) => s.paidCount > 0);
+
   const onSave = async () => {
     if (!token || !cohortId) return;
     const amount = parseFloat(amountInput);
@@ -75,6 +82,24 @@ export default function PaymentsScreen() {
       setError('Enter a valid fee amount.');
       return;
     }
+    // Changing the fee after students have already paid the old amount
+    // creates a silent mismatch between what they paid and what's now
+    // configured — worth an explicit heads-up before committing.
+    if (feeConfig && someAlreadyPaid) {
+      confirmAction({
+        title: 'Change registration fee?',
+        message:
+          'Some students have already paid the current amount. Changing it now will not refund or re-charge anyone — it only affects new payments.',
+        confirmLabel: 'Change fee',
+        onConfirm: () => saveFee(amount),
+      });
+      return;
+    }
+    await saveFee(amount);
+  };
+
+  const saveFee = async (amount: number) => {
+    if (!token || !cohortId) return;
     setError(null);
     setSaving(true);
     try {
@@ -85,6 +110,20 @@ export default function PaymentsScreen() {
       setError(e instanceof Error ? e.message : 'Failed to save fee');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const onRemind = async (groupId: string) => {
+    if (!token) return;
+    setError(null);
+    setRemindingGroupId(groupId);
+    try {
+      const result = await remindUnpaidMembers(groupId, token);
+      setReminded((prev) => ({ ...prev, [groupId]: result.remindedCount }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to send reminders');
+    } finally {
+      setRemindingGroupId(null);
     }
   };
 
@@ -105,14 +144,24 @@ export default function PaymentsScreen() {
             placeholder="e.g. 50.00"
             keyboardType="decimal-pad"
             placeholderTextColor={colors.textMuted}
+            accessibilityLabel="Registration fee amount in Ghana cedis"
           />
-          <Pressable style={styles.button} onPress={onSave} disabled={saving}>
-            {saving ? (
-              <ActivityIndicator color={colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.buttonText}>{feeConfig ? 'Update fee' : 'Set fee'}</Text>
-            )}
-          </Pressable>
+          <Button
+            label={feeConfig ? 'Update fee' : 'Set fee'}
+            onPress={onSave}
+            loading={saving}
+            style={[
+              styles.button,
+              {
+                borderRadius: radius.xxxl,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.3,
+                shadowRadius: 14,
+                elevation: 6,
+              },
+            ]}
+          />
         </Card>
       ) : null}
 
@@ -127,7 +176,13 @@ export default function PaymentsScreen() {
                 style={styles.statusCard}
                 tint={s.allPaid ? colors.accents.green : undefined}
               >
-                <Pressable style={styles.statusRow} onPress={() => toggleExpanded(s.groupId)}>
+                <Pressable
+                  style={styles.statusRow}
+                  onPress={() => toggleExpanded(s.groupId)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded }}
+                  accessibilityLabel={`Group ${s.groupNumber} payment status, ${s.paidCount} of ${s.totalMembers} paid`}
+                >
                   <Text style={styles.cardTitle}>
                     Group {s.groupNumber} {s.groupName ? `— ${s.groupName}` : ''}
                   </Text>
@@ -150,6 +205,24 @@ export default function PaymentsScreen() {
                         </View>
                       </View>
                     ))}
+                    {!s.allPaid ? (
+                      <>
+                        <Button
+                          label="Remind unpaid members"
+                          icon="bell"
+                          variant="secondary"
+                          size="sm"
+                          style={styles.remindButton}
+                          onPress={() => onRemind(s.groupId)}
+                          loading={remindingGroupId === s.groupId}
+                        />
+                        {reminded[s.groupId] !== undefined ? (
+                          <Text style={styles.hint}>
+                            Reminded {reminded[s.groupId]} member{reminded[s.groupId] === 1 ? '' : 's'}.
+                          </Text>
+                        ) : null}
+                      </>
+                    ) : null}
                   </View>
                 ) : null}
               </Card>
@@ -169,8 +242,8 @@ function createStyles(colors: Colors) {
     cardMeta: { ...typography.caption, color: colors.textMuted },
     sectionHeading: { ...typography.subheading, marginTop: spacing.md, marginBottom: spacing.sm },
     statusList: { gap: spacing.sm },
-    statusCard: { gap: spacing.xs },
-    statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    statusCard: { gap: spacing.xs, borderRadius: radius.xxl },
+    statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
     statusRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     memberList: { gap: spacing.xs, marginTop: spacing.xs },
     memberRow: {
@@ -186,13 +259,14 @@ function createStyles(colors: Colors) {
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.sm,
+      borderRadius: radius.xl,
       padding: spacing.md,
       fontSize: 15,
       backgroundColor: colors.surface,
     },
-    button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
+    button: { marginTop: spacing.xs },
+    remindButton: { marginTop: spacing.sm },
+    hint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
     emptyText: { color: colors.textMuted, textAlign: 'center' },
     error: { color: colors.danger },
   });

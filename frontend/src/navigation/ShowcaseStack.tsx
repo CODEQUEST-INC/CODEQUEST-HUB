@@ -21,7 +21,7 @@ export default function ShowcaseStack() {
     >
       <Stack.Screen name="ShowcaseGallery" component={ShowcaseGalleryScreen} options={{ title: 'Showcase' }} />
       <Stack.Screen name="ShowcaseDetail" component={ShowcaseDetailScreen} options={{ title: 'Project' }} />
-      <Stack.Screen name="ShowcaseEdit" component={ShowcaseEditScreen} options={{ title: 'My Showcase' }} />
+      <Stack.Screen name="ShowcaseEdit" component={ShowcaseEditScreen} options={{ title: 'Showcase Entry' }} />
     </Stack.Navigator>
   );
 }

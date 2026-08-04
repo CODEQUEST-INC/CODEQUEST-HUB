@@ -141,3 +141,9 @@ export function getSupervisorProposals(token: string): Promise<ProposalResponse[
 export function getProposalHistory(proposalId: string, token: string): Promise<ProposalHistoryResponse> {
   return request<ProposalHistoryResponse>(`/api/proposals/${proposalId}/history`, { token });
 }
+
+export function getPendingReviewCount(token: string): Promise<number> {
+  return request<{ pendingCount: number }>('/api/proposals/admin/pending-count', { token }).then(
+    (r) => r.pendingCount
+  );
+}

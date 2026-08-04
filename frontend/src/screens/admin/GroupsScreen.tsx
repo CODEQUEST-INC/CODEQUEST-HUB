@@ -19,6 +19,7 @@ import { CohortGroupPaymentSummary, getCohortPaymentStatuses } from '../../api/p
 import { UserSearchResult } from '../../api/users';
 import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
+import Button from '../../components/Button';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import PaidBadge from '../../components/PaidBadge';
@@ -195,12 +196,13 @@ export default function GroupsScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {cohortId ? (
-        <Card>
+        <Card style={styles.card}>
           <Text style={styles.cardTitle}>Auto-generate groups</Text>
           <Text style={styles.hint}>
             Dissolves every existing group in this cohort and rebuilds them from scratch, chunking all
             registered students into fixed-size groups ordered by index number. This cannot be undone.
           </Text>
+          <Text style={styles.fieldLabel}>Group size</Text>
           <TextInput
             style={styles.input}
             value={groupSize}
@@ -209,20 +211,18 @@ export default function GroupsScreen() {
             keyboardType="numeric"
             placeholderTextColor={colors.textMuted}
           />
-          <Pressable style={styles.dangerButton} onPress={onAutoGroup} disabled={autoGrouping}>
-            {autoGrouping ? (
-              <ActivityIndicator color={colors.danger} />
-            ) : (
-              <Text style={styles.dangerButtonText}>
-                {confirmingAutoGroup ? 'Tap again to confirm — this resets the cohort' : 'Auto-generate groups'}
-              </Text>
-            )}
-          </Pressable>
+          <Button
+            label={confirmingAutoGroup ? 'Tap again to confirm — this resets the cohort' : 'Auto-generate groups'}
+            onPress={onAutoGroup}
+            loading={autoGrouping}
+            variant="dangerOutline"
+            style={styles.dangerButton}
+          />
         </Card>
       ) : null}
 
       {groups.map((g) => (
-        <Card key={g.id} tint={paidGroupIds.has(g.id) ? colors.accents.green : undefined}>
+        <Card key={g.id} tint={paidGroupIds.has(g.id) ? colors.accents.green : undefined} style={styles.card}>
           <View style={styles.groupHeader}>
             <Avatar name={g.name ?? `Group ${g.groupNumber}`} size={32} photoUrl={resolveGroupPhotoUrl(g.photoUrl)} />
             <Text style={[styles.cardTitle, styles.groupHeaderTitle]}>
@@ -237,7 +237,12 @@ export default function GroupsScreen() {
                 roleFilter="supervisor"
                 placeholder="Search supervisors"
               />
-              <Pressable onPress={() => setEditingSupervisorGroupId(null)}>
+              <Pressable
+                onPress={() => setEditingSupervisorGroupId(null)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel changing supervisor"
+              >
                 <Text style={styles.changeLink}>Cancel</Text>
               </Pressable>
             </View>
@@ -246,7 +251,12 @@ export default function GroupsScreen() {
               <Text style={styles.cardMeta}>
                 {g.supervisorId ? `Supervisor: ${userLabel(g.supervisorId, names)}` : 'No supervisor assigned'}
               </Text>
-              <Pressable onPress={() => setEditingSupervisorGroupId(g.id)}>
+              <Pressable
+                onPress={() => setEditingSupervisorGroupId(g.id)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Change supervisor"
+              >
                 <Text style={styles.changeLink}>Change</Text>
               </Pressable>
             </View>
@@ -257,15 +267,23 @@ export default function GroupsScreen() {
               const name = userLabel(m.userId, names);
               const isLeader = g.groupLeaderId === m.userId;
               return (
-                <Pressable key={m.id} style={styles.memberChip} onPress={() => onSetLeader(g.id, m.userId)}>
+                <Pressable
+                  key={m.id}
+                  style={({ pressed }) => [styles.memberChip, pressed && styles.memberChipPressed]}
+                  onPress={() => onSetLeader(g.id, m.userId)}
+                  accessibilityRole="button"
+                  accessibilityLabel={isLeader ? `${name}, group leader. Tap to keep as leader` : `Make ${name} group leader`}
+                >
                   <Avatar name={name} size={24} />
                   <Text style={styles.memberChipText}>
                     {name} {isLeader ? '★' : ''}
                   </Text>
                   <Pressable
                     onPress={() => onRemoveMember(g.id, m.userId)}
-                    hitSlop={8}
+                    hitSlop={16}
                     style={styles.memberRemoveButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${name} from group`}
                   >
                     <Feather name="x" size={12} color={colors.textMuted} />
                   </Pressable>
@@ -285,8 +303,9 @@ export default function GroupsScreen() {
       ) : null}
 
       {cohortId ? (
-        <Card>
+        <Card style={styles.card}>
           <Text style={styles.cardTitle}>Create group</Text>
+          <Text style={styles.fieldLabel}>Group number</Text>
           <TextInput
             style={styles.input}
             value={newNumber}
@@ -295,6 +314,7 @@ export default function GroupsScreen() {
             keyboardType="numeric"
             placeholderTextColor={colors.textMuted}
           />
+          <Text style={styles.fieldLabel}>Name</Text>
           <TextInput
             style={styles.input}
             value={newName}
@@ -307,16 +327,19 @@ export default function GroupsScreen() {
             <View style={styles.selectedRow}>
               <Avatar name={newSupervisor.fullName} size={28} />
               <Text style={styles.selectedName}>{newSupervisor.fullName}</Text>
-              <Pressable onPress={() => setNewSupervisor(null)}>
+              <Pressable
+                onPress={() => setNewSupervisor(null)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Clear selected supervisor"
+              >
                 <Text style={styles.changeLink}>Change</Text>
               </Pressable>
             </View>
           ) : (
             <UserPicker onSelect={setNewSupervisor} roleFilter="supervisor" placeholder="Search supervisors" />
           )}
-          <Pressable style={styles.button} onPress={onCreate}>
-            <Text style={styles.buttonText}>Create</Text>
-          </Pressable>
+          <Button label="Create" onPress={onCreate} style={styles.button} accessibilityLabel="Create group" />
         </Card>
       ) : null}
     </ScrollView>
@@ -326,22 +349,26 @@ export default function GroupsScreen() {
 function createStyles(colors: Colors) {
   return StyleSheet.create({
     container: { padding: spacing.xxl, gap: spacing.md, backgroundColor: colors.bg },
+    card: { borderRadius: radius.xxl },
     groupHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     groupHeaderTitle: { flex: 1 },
     cardTitle: { ...typography.body, fontWeight: '600' },
     cardMeta: { ...typography.caption, color: colors.textMuted },
+    fieldLabel: { ...typography.label, color: colors.textMuted },
     hint: { ...typography.caption, color: colors.textMuted },
     memberRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     memberChip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
+      minHeight: 32,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.pill,
       paddingVertical: spacing.xs,
       paddingHorizontal: spacing.sm,
     },
+    memberChipPressed: { opacity: 0.8 },
     memberChipText: { ...typography.caption, color: colors.text },
     memberRemoveButton: { marginLeft: spacing.xs },
     supervisorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
@@ -351,7 +378,7 @@ function createStyles(colors: Colors) {
       gap: spacing.sm,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.sm,
+      borderRadius: radius.xl,
       padding: spacing.md,
       backgroundColor: colors.surface,
     },
@@ -360,22 +387,13 @@ function createStyles(colors: Colors) {
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radius.sm,
+      borderRadius: radius.xl,
       padding: spacing.md,
       fontSize: 15,
       backgroundColor: colors.surface,
     },
-    button: { backgroundColor: colors.primary, borderRadius: radius.sm, padding: spacing.md, alignItems: 'center' },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600' },
-    dangerButton: {
-      borderWidth: 1,
-      borderColor: colors.danger,
-      borderRadius: radius.sm,
-      padding: spacing.md,
-      alignItems: 'center',
-      marginTop: spacing.sm,
-    },
-    dangerButtonText: { color: colors.danger, fontWeight: '600' },
+    button: { marginTop: spacing.xs },
+    dangerButton: { marginTop: spacing.sm },
     emptyText: { color: colors.textMuted, textAlign: 'center' },
     error: { color: colors.danger },
   });
