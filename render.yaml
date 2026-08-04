@@ -152,20 +152,24 @@ services:
     dockerContext: ./gateway-service
     healthCheckPath: /health
     envVars:
+      # Render's internal hostname is the service's slug (shown in the dashboard's
+      # "Connect" menu / the subdomain of its public URL), not its plain name — a
+      # slug only gets a random suffix when the plain name collides with another
+      # Render user's service. Update these if a service is ever recreated.
       - key: AUTH_SERVICE_URL
-        value: http://auth-service:10000
+        value: http://auth-service-cieo:10000
       - key: GROUP_SERVICE_URL
-        value: http://group-service:10000
+        value: http://group-service-uk57:10000
       - key: PROJECT_SERVICE_URL
-        value: http://project-service:10000
+        value: http://project-service-gyha:10000
       - key: TASK_SERVICE_URL
-        value: http://task-service:10000
+        value: http://task-service-bt1r:10000
       - key: JUDGING_SERVICE_URL
         value: http://judging-service:10000
       - key: SHOWCASE_SERVICE_URL
         value: http://showcase-service:10000
       - key: PAYMENT_SERVICE_URL
-        value: http://payment-service:10000
+        value: http://payment-service-z7dc:10000
       # Update once the frontend has a deployed origin (Expo web build, custom domain, etc).
       - key: GATEWAY_CORS_ALLOWED_ORIGINS
         value: http://localhost:3000,http://localhost:19006,http://localhost:8081
