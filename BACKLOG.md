@@ -22,7 +22,7 @@ estimated — pull one out and flesh it out before starting it.
 
 ## Infrastructure
 
-- [ ] **Backend hosting on Render** — move the backend off local Docker Compose to a hosted Render deployment (8 services + Postgres connection, Postgres already externally hosted on Neon so no DB migration needed). Needs env/secrets setup on Render and a decision on whether all 8 services stay separate or get consolidated. (Railway was tried first — hit its free/trial plan's service-count limit; abandoned, project deleted.)
+- [x] **Backend hosting on Render** — done. All 8 services deployed as free-tier Web Services via a `render.yaml` Blueprint (gateway: https://gateway-service-j9ql.onrender.com). Postgres stayed on Neon (unchanged). Since free-tier services can't receive private-network traffic, gateway routes to each service over its public URL rather than an internal hostname — this required allowlisting (not denylisting) proxied response headers and forcing `Accept-Encoding: identity` on downstream calls in `GatewayController`, since each response otherwise carried its own Cloudflare edge headers and could arrive gzip'd. (Railway was tried first — hit its free/trial plan's service-count limit; abandoned, project deleted.)
 
 ## Cross-cutting / QA
 
