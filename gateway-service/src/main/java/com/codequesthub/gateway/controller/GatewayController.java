@@ -33,12 +33,14 @@ import java.util.Set;
 public class GatewayController {
 
     private static final Set<String> EXCLUDED_REQUEST_HEADERS = Set.of("host", "content-length", "connection");
-    // content-length/content-encoding are excluded because RestTemplate may transparently
-    // decompress a gzip'd downstream response while leaving those headers describing the
-    // original compressed body — forwarding them verbatim then mismatches the actual bytes
-    // written here, which edge proxies (Render's Cloudflare front door) reject outright.
-    private static final Set<String> EXCLUDED_RESPONSE_HEADERS =
-        Set.of("transfer-encoding", "connection", "content-length", "content-encoding");
+    // Allowlist, not a denylist: each downstream call goes over that service's public
+    // URL (Render's free tier can't receive private-network traffic), so the response
+    // already carries that service's own edge/platform headers (cf-ray, alt-svc, rndr-id,
+    // strict-transport-security, etc.). Echoing those back out through the gateway's own
+    // edge duplicates/conflicts with the ones it adds itself, which gets the whole
+    // response rejected upstream as malformed — so only forward what the client actually
+    // needs to parse the body.
+    private static final Set<String> FORWARDED_RESPONSE_HEADERS = Set.of("content-type");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final RestTemplate restTemplate;
@@ -137,7 +139,7 @@ public class GatewayController {
 
         HttpHeaders responseHeaders = new HttpHeaders();
         response.getHeaders().forEach((name, values) -> {
-            if (!EXCLUDED_RESPONSE_HEADERS.contains(name.toLowerCase())) {
+            if (FORWARDED_RESPONSE_HEADERS.contains(name.toLowerCase())) {
                 responseHeaders.put(name, values);
             }
         });
