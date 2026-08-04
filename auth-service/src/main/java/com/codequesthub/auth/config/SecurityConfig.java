@@ -31,7 +31,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/me", "/api/auth/me/password", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/users", "/api/auth/users/search", "/api/auth/users/*", "/api/auth/notifications/mine", "/api/auth/notifications/*/read", "/api/auth/health", "/error").permitAll()
+                .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/me", "/api/auth/me/password", "/api/auth/me/verify-email", "/api/auth/me/resend-verification", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/users", "/api/auth/users/search", "/api/auth/users/*", "/api/auth/notifications/mine", "/api/auth/notifications/*/read", "/api/auth/health", "/error").permitAll()
                 .anyRequest().authenticated()
             );
         return http.build();

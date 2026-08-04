@@ -216,6 +216,19 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
         <Pressable
           style={[styles.row, styles.rowBorder]}
+          onPress={() => navigation.navigate('VerifyEmail')}
+          accessibilityRole="button"
+          accessibilityLabel={user.emailVerifiedAt ? 'Email verified' : 'Verify email'}
+        >
+          <Feather name="mail" size={18} color={colors.text} />
+          <Text style={styles.rowLabel}>{user.emailVerifiedAt ? 'Email verified' : 'Verify email'}</Text>
+          <Text style={user.emailVerifiedAt ? styles.rowValueAccent : styles.rowValueWarning}>
+            {user.emailVerifiedAt ? 'Verified' : 'Not verified'}
+          </Text>
+          <Feather name="chevron-right" size={16} color={colors.textMuted} />
+        </Pressable>
+        <Pressable
+          style={[styles.row, styles.rowBorder]}
           onPress={() => navigation.navigate('ChangePassword')}
           accessibilityRole="button"
           accessibilityLabel="Change password"
@@ -290,6 +303,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     rowLabel: { ...typography.body, fontWeight: '700', flex: 1 },
     rowValue: { ...typography.body, color: colors.textMuted },
     rowValueAccent: { ...typography.body, fontWeight: '600', color: colors.primary },
+    rowValueWarning: { ...typography.body, fontWeight: '600', color: colors.accents.amber.fg },
     unreadBadge: {
       minWidth: 18,
       height: 18,

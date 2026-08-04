@@ -36,4 +36,17 @@ public class EmailService {
             log.error("Failed to send password reset email to {}", toEmail, e);
         }
     }
+
+    public void sendVerificationEmail(String toEmail, String verificationCode) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(toEmail);
+        message.setSubject("Verify your email");
+        message.setText("Your verification code is: " + verificationCode);
+        try {
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Failed to send verification email to {}", toEmail, e);
+        }
+    }
 }

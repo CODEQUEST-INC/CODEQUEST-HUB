@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Profile: undefined;
   Help: undefined;
   ChangePassword: undefined;
+  VerifyEmail: undefined;
 };
 
 export type MainTabsParamList = {

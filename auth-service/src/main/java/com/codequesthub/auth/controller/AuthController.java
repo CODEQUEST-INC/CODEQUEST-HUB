@@ -149,6 +149,31 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    // any authenticated user — verifies their own account only
+    @PostMapping("/me/verify-email")
+    public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyEmailRequest req,
+                                          @RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+        authService.verifyEmail(userId, req.getCode());
+        return ResponseEntity.noContent().build();
+    }
+
+    // any authenticated user — resends to their own registered email only
+    @PostMapping("/me/resend-verification")
+    public ResponseEntity<?> resendVerification(@RequestHeader("Authorization") String authHeader) {
+        if (!requireValidToken(authHeader)) {
+            return unauthorized(authHeader);
+        }
+        Claims claims = jwtUtil.parseToken(authHeader.substring(7));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+        authService.resendVerification(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     // any authenticated user — their own notifications only
     @GetMapping("/notifications/mine")
     public ResponseEntity<?> myNotifications(@RequestHeader("Authorization") String authHeader) {

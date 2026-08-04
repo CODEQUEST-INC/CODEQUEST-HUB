@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import HelpScreen from '../screens/HelpScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 import { useTheme } from '../theme';
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
@@ -35,6 +36,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
           <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Help & Rules' }} />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email' }} />
         </Stack.Navigator>
       ) : (
         <AuthStack />

@@ -5,9 +5,9 @@ estimated — pull one out and flesh it out before starting it.
 
 ## Auth & account
 
-- [ ] **Email verification on registration** — send a confirmation/verification email when a user registers, before (or alongside) granting access. Needs an email-sending capability in `auth-service` (none exists today) plus a verification-token/expiry flow.
+- [x] **Email verification on registration** — done. Soft/non-blocking: registration still auto-signs-in immediately, a verification email goes out via Brevo SMTP, user verifies whenever via the "Verify email" row in Profile (`VerifyEmailScreen`, with resend). No access is restricted if never verified.
 - [ ] **Sign up / sign in with Google** — OAuth provider integration alongside the existing email+password flow. Needs backend OAuth handling in `auth-service` and a frontend button on Login/Register.
-- [x] **Forgot password** — done. Reset-token flow in `auth-service` (email stubbed), `ForgotPasswordScreen` reachable from Login.
+- [x] **Forgot password** — done. Reset-token flow in `auth-service`, real email via Brevo SMTP, `ForgotPasswordScreen` reachable from Login.
 - [x] **Change password** (Settings) — done. `ChangePasswordScreen`, reachable from Profile.
 - [x] **Auth / validation hardening** — done (scoped to login rate limiting). Max 5 attempts per email per 15-minute window in `auth-service`.
 

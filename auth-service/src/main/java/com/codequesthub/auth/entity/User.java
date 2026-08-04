@@ -40,6 +40,15 @@ public class User {
     @Column(name = "reset_token_expires_at")
     private OffsetDateTime resetTokenExpiresAt;
 
+    @Column(name = "email_verified_at")
+    private OffsetDateTime emailVerifiedAt;
+
+    @Column(name = "verification_token", length = 64)
+    private String verificationToken;
+
+    @Column(name = "verification_token_expires_at")
+    private OffsetDateTime verificationTokenExpiresAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -76,6 +85,12 @@ public class User {
     public void setResetToken(String v) { this.resetToken = v; }
     public OffsetDateTime getResetTokenExpiresAt() { return resetTokenExpiresAt; }
     public void setResetTokenExpiresAt(OffsetDateTime v) { this.resetTokenExpiresAt = v; }
+    public OffsetDateTime getEmailVerifiedAt() { return emailVerifiedAt; }
+    public void setEmailVerifiedAt(OffsetDateTime v) { this.emailVerifiedAt = v; }
+    public String getVerificationToken() { return verificationToken; }
+    public void setVerificationToken(String v) { this.verificationToken = v; }
+    public OffsetDateTime getVerificationTokenExpiresAt() { return verificationTokenExpiresAt; }
+    public void setVerificationTokenExpiresAt(OffsetDateTime v) { this.verificationTokenExpiresAt = v; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

@@ -10,6 +10,7 @@ export interface UserResponse {
   studentId: string | null;
   indexNumber: string | null;
   cohortId: string | null;
+  emailVerifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,4 +63,12 @@ export function forgotPassword(email: string): Promise<{ message: string }> {
 
 export function resetPassword(token: string, newPassword: string): Promise<void> {
   return request<void>('/api/auth/reset-password', { method: 'POST', body: { token, newPassword } });
+}
+
+export function verifyEmail(code: string, token: string): Promise<void> {
+  return request<void>('/api/auth/me/verify-email', { method: 'POST', body: { code }, token });
+}
+
+export function resendVerification(token: string): Promise<void> {
+  return request<void>('/api/auth/me/resend-verification', { method: 'POST', token });
 }

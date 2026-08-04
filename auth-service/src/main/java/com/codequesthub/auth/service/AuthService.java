@@ -110,7 +110,12 @@ public class AuthService {
         user.setIndexNumber(req.getIndexNumber());
         user.setCohortId(req.getCohortId());
 
+        String verificationCode = generateSecureToken();
+        user.setVerificationToken(verificationCode);
+        user.setVerificationTokenExpiresAt(OffsetDateTime.now().plusHours(24));
+
         user = userRepo.save(user);
+        emailService.sendVerificationEmail(user.getEmail(), verificationCode);
 
         String token = jwtUtil.generateToken(
             user.getId().toString(), user.getEmail(), user.getRole().name());
@@ -251,7 +256,7 @@ public class AuthService {
     // be used to enumerate registered emails.
     public void forgotPassword(String email) {
         userRepo.findByEmail(email).ifPresent(user -> {
-            String token = generateResetToken();
+            String token = generateSecureToken();
             user.setResetToken(token);
             user.setResetTokenExpiresAt(OffsetDateTime.now().plusHours(1));
             userRepo.save(user);
@@ -273,7 +278,41 @@ public class AuthService {
         userRepo.save(user);
     }
 
-    private String generateResetToken() {
+    public void verifyEmail(UUID userId, String code) {
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (user.getEmailVerifiedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is already verified");
+        }
+        if (user.getVerificationToken() == null || !user.getVerificationToken().equals(code)
+            || user.getVerificationTokenExpiresAt() == null
+            || user.getVerificationTokenExpiresAt().isBefore(OffsetDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired verification code");
+        }
+
+        user.setEmailVerifiedAt(OffsetDateTime.now());
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiresAt(null);
+        userRepo.save(user);
+    }
+
+    public void resendVerification(UUID userId) {
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (user.getEmailVerifiedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is already verified");
+        }
+
+        String code = generateSecureToken();
+        user.setVerificationToken(code);
+        user.setVerificationTokenExpiresAt(OffsetDateTime.now().plusHours(24));
+        userRepo.save(user);
+        emailService.sendVerificationEmail(user.getEmail(), code);
+    }
+
+    private String generateSecureToken() {
         byte[] bytes = new byte[24];
         random.nextBytes(bytes);
         StringBuilder sb = new StringBuilder(bytes.length * 2);
