@@ -34,6 +34,8 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
 
   group-service:
     build:
@@ -110,6 +112,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-dev_only_change_me_32chars_min}
       PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
 
 volumes:
   showcase_uploads:
