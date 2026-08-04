@@ -4,6 +4,7 @@ services:
     runtime: docker
     plan: free
     branch: main
+    repo: https://github.com/CODEQUEST-INC/CODEQUEST-HUB
     dockerfilePath: ./auth-service/Dockerfile
     dockerContext: .
     healthCheckPath: /api/auth/health
@@ -26,6 +27,7 @@ services:
     runtime: docker
     plan: free
     branch: main
+    repo: https://github.com/CODEQUEST-INC/CODEQUEST-HUB
     dockerfilePath: ./group-service/Dockerfile
     dockerContext: .
     healthCheckPath: /api/groups/health
@@ -44,6 +46,7 @@ services:
     runtime: docker
     plan: free
     branch: main
+    repo: https://github.com/CODEQUEST-INC/CODEQUEST-HUB
     dockerfilePath: ./project-service/Dockerfile
     dockerContext: .
     healthCheckPath: /api/proposals/health
@@ -62,6 +65,7 @@ services:
     runtime: docker
     plan: free
     branch: main
+    repo: https://github.com/CODEQUEST-INC/CODEQUEST-HUB
     dockerfilePath: ./task-service/Dockerfile
     dockerContext: .
     healthCheckPath: /api/tasks/health
@@ -80,6 +84,7 @@ services:
     runtime: docker
     plan: free
     branch: main
+    repo: https://github.com/CODEQUEST-INC/CODEQUEST-HUB
     dockerfilePath: ./judging-service/Dockerfile
     dockerContext: .
     healthCheckPath: /api/judging/health
@@ -98,6 +103,7 @@ services:
     runtime: docker
     plan: free
     branch: main
+    repo: https://github.com/CODEQUEST-INC/CODEQUEST-HUB
     dockerfilePath: ./showcase-service/Dockerfile
     dockerContext: .
     healthCheckPath: /api/showcase/health
@@ -116,6 +122,7 @@ services:
     runtime: docker
     plan: free
     branch: main
+    repo: https://github.com/CODEQUEST-INC/CODEQUEST-HUB
     dockerfilePath: ./payment-service/Dockerfile
     dockerContext: .
     healthCheckPath: /api/payments/health
@@ -140,6 +147,7 @@ services:
     runtime: docker
     plan: free
     branch: main
+    repo: https://github.com/CODEQUEST-INC/CODEQUEST-HUB
     dockerfilePath: ./gateway-service/Dockerfile
     dockerContext: ./gateway-service
     healthCheckPath: /health
