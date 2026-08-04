@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import HelpScreen from '../screens/HelpScreen';
+import PdfViewerScreen from '../screens/PdfViewerScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 import { useTheme } from '../theme';
@@ -37,6 +38,11 @@ export default function RootNavigator() {
           <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Help & Rules' }} />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email' }} />
+          <Stack.Screen
+            name="PdfViewer"
+            component={PdfViewerScreen}
+            options={({ route }) => ({ title: route.params.title ?? 'Proposal PDF' })}
+          />
         </Stack.Navigator>
       ) : (
         <AuthStack />

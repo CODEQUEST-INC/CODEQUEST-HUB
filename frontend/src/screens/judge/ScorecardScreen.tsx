@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
 import Button from '../../components/Button';
+import KeyboardAvoidingScreen from '../../components/KeyboardAvoidingScreen';
 import { GroupResponse, listGroupsByCohort, resolveGroupPhotoUrl } from '../../api/groups';
 import { getMyScorecard, JudgingCriterion, listCriteria, ScoreEntry, submitScorecard } from '../../api/judging';
 import { useAuth } from '../../auth/AuthContext';
@@ -184,8 +185,9 @@ export default function ScorecardScreen() {
   }, 0);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
-      <Text style={styles.label}>Cohort</Text>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+        <Text style={styles.label}>Cohort</Text>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -317,7 +319,8 @@ export default function ScorecardScreen() {
           </View>
         </>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

@@ -1,12 +1,14 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useRef, useState } from 'react';
-import { Linking, ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
 import { resolveProposalPdfUrl, reviewProposal, ReviewAction } from '../../api/proposals';
 import { useAuth } from '../../auth/AuthContext';
 import Button from '../../components/Button';
 import StatusBadge from '../../components/StatusBadge';
+import KeyboardAvoidingScreen from '../../components/KeyboardAvoidingScreen';
+import { rootNavigation } from '../../navigation/headerProfileButton';
 import { SupervisorStackParamList } from '../../navigation/types';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 import { confirmAction } from '../../utils/confirm';
@@ -64,7 +66,8 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <StatusBadge status={proposal.status} />
       <Text style={styles.title}>{proposal.title}</Text>
 
@@ -85,7 +88,7 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
           style={styles.pdfButton}
           onPress={() => {
             const url = resolveProposalPdfUrl(proposal.pdfUrl)!;
-            Linking.openURL(url).catch(() => setError('Could not open the PDF attachment.'));
+            (rootNavigation(navigation) as any).navigate('PdfViewer', { url, title: 'Proposal PDF' });
           }}
         />
       ) : null}
@@ -143,7 +146,8 @@ export default function ReviewDetailScreen({ route, navigation }: Props) {
       ) : (
         <Text style={styles.meta}>This proposal has already been reviewed.</Text>
       )}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

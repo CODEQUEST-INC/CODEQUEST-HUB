@@ -5,6 +5,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import TextInput from '../components/TextInput';
 import Text from '../components/Text';
 import Button from '../components/Button';
+import KeyboardAvoidingScreen from '../components/KeyboardAvoidingScreen';
 import { useAuth } from '../auth/AuthContext';
 import { AuthStackParamList } from '../navigation/types';
 import { Colors, radius, spacing, typography, useTheme } from '../theme';
@@ -38,7 +39,7 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingScreen style={styles.screen}>
       <View style={styles.container}>
         <Image source={logo} style={styles.logo} resizeMode="contain" accessible={false} />
         <Text style={styles.title}>Welcome back</Text>
@@ -126,7 +127,7 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.link}>Need an account? Register</Text>
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingScreen>
   );
 }
 

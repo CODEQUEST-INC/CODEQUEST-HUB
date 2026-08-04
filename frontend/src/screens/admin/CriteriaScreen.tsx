@@ -10,6 +10,7 @@ import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import ProgressBar from '../../components/ProgressBar';
+import KeyboardAvoidingScreen from '../../components/KeyboardAvoidingScreen';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 export default function CriteriaScreen() {
@@ -124,7 +125,8 @@ export default function CriteriaScreen() {
   const weightMismatch = criteria.some((c) => c.active) && activeWeightTotal !== 100;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -201,7 +203,8 @@ export default function CriteriaScreen() {
         />
         <Button label="Add" onPress={onCreate} style={styles.button} accessibilityLabel="Add criterion" />
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

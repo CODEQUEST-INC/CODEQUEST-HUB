@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import TextInput from '../components/TextInput';
 import Text from '../components/Text';
 import Button from '../components/Button';
+import KeyboardAvoidingScreen from '../components/KeyboardAvoidingScreen';
 import { forgotPassword, resetPassword } from '../api/auth';
 import { AuthStackParamList } from '../navigation/types';
 import { Colors, radius, spacing, typography, useTheme } from '../theme';
@@ -66,7 +67,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingScreen style={styles.screen}>
       <View style={styles.container}>
         <Pressable
           onPress={() => navigation.goBack()}
@@ -191,7 +192,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           </>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingScreen>
   );
 }
 

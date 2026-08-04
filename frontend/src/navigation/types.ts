@@ -14,6 +14,7 @@ export type RootStackParamList = {
   Help: undefined;
   ChangePassword: undefined;
   VerifyEmail: undefined;
+  PdfViewer: { url: string; title?: string };
 };
 
 export type MainTabsParamList = {

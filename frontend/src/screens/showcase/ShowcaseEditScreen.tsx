@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
+import KeyboardAvoidingScreen from '../../components/KeyboardAvoidingScreen';
 import { ApiError } from '../../api/client';
 import { getMyGroup } from '../../api/groups';
 import { getMyProposal, ProposalResponse } from '../../api/proposals';
@@ -242,7 +243,7 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
   const coverUrl = photos.length > 0 ? resolvePhotoUrl(photos[0].url) : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <KeyboardAvoidingScreen style={{ backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.coverWrap}>
           {coverUrl ? (
@@ -385,7 +386,7 @@ export default function ShowcaseEditScreen({ navigation }: Props) {
           ]}
         />
       </View>
-    </View>
+    </KeyboardAvoidingScreen>
   );
 }
 

@@ -8,6 +8,7 @@ import { useAuth } from '../../auth/AuthContext';
 import Avatar from '../../components/Avatar';
 import Card from '../../components/Card';
 import StatTile from '../../components/StatTile';
+import KeyboardAvoidingScreen from '../../components/KeyboardAvoidingScreen';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 import { confirmAction } from '../../utils/confirm';
 
@@ -94,7 +95,8 @@ export default function UsersScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       {stats ? (
         <View style={styles.statsGrid}>
           <StatTile icon="users" label="Total users" value={stats.totalUsers} tint={colors.accents.violet} />
@@ -152,7 +154,8 @@ export default function UsersScreen() {
       {query.trim().length < 2 ? (
         <Text style={styles.hint}>Type at least 2 characters to search.</Text>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

@@ -195,8 +195,14 @@ export default function TaskBoardScreen({ navigation }: Props) {
                               COLUMNS.find((c) => c.status === NEXT_STATUS[task.status])?.label
                             }`}
                           >
-                            <Text style={styles.advanceButtonText}>
-                              Move to {COLUMNS.find((c) => c.status === NEXT_STATUS[task.status])?.label}
+                            <Feather name="arrow-right" size={12} color={colors.textOnPrimary} />
+                            <Text
+                              style={styles.advanceButtonText}
+                              numberOfLines={1}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.85}
+                            >
+                              {COLUMNS.find((c) => c.status === NEXT_STATUS[task.status])?.label}
                             </Text>
                           </Pressable>
                         ) : null}
@@ -277,8 +283,11 @@ function createStyles(colors: Colors) {
       minHeight: 44,
       borderRadius: radius.xl,
       paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.xs,
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 4,
       marginTop: spacing.xs,
     },
     advanceButtonPressed: { opacity: 0.8 },

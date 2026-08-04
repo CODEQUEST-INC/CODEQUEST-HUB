@@ -2,8 +2,9 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '../../components/Text';
+import { rootNavigation } from '../../navigation/headerProfileButton';
 import { ApiError } from '../../api/client';
 import { Cohort, listCohorts } from '../../api/cohorts';
 import { getMyGroup, GroupResponse } from '../../api/groups';
@@ -194,7 +195,7 @@ export default function ProposalStatusScreen({ navigation }: Props) {
   const openPdf = () => {
     if (!proposal.pdfUrl) return;
     const url = resolveProposalPdfUrl(proposal.pdfUrl)!;
-    Linking.openURL(url).catch(() => setError('Could not open the PDF attachment.'));
+    (rootNavigation(navigation) as any).navigate('PdfViewer', { url, title: 'Proposal PDF' });
   };
 
   // Two footer slots (matches the design's two-button bar) — which action

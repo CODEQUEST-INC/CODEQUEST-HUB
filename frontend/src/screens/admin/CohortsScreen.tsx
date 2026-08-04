@@ -8,6 +8,7 @@ import { ApiError } from '../../api/client';
 import { Cohort, createCohort, deleteCohort, listCohorts, updateCohort } from '../../api/cohorts';
 import { useAuth } from '../../auth/AuthContext';
 import Card from '../../components/Card';
+import KeyboardAvoidingScreen from '../../components/KeyboardAvoidingScreen';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 
 export default function CohortsScreen() {
@@ -112,7 +113,8 @@ export default function CohortsScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -179,7 +181,8 @@ export default function CohortsScreen() {
         />
         <Button label="Add" onPress={onCreate} style={styles.button} accessibilityLabel="Add cohort" />
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

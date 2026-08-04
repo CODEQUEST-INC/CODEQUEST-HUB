@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../components/TextInput';
 import Text from '../components/Text';
 import Button from '../components/Button';
+import KeyboardAvoidingScreen from '../components/KeyboardAvoidingScreen';
 import { resendVerification, verifyEmail } from '../api/auth';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
@@ -67,7 +68,8 @@ export default function VerifyEmailScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.subtitle}>
         We sent a verification code to {user?.email}. Enter it below to verify your account.
       </Text>
@@ -116,7 +118,8 @@ export default function VerifyEmailScreen({ navigation }: Props) {
       >
         <Text style={styles.link}>{resending ? 'Sending…' : 'Resend code'}</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

@@ -45,7 +45,7 @@
       "expo-font"
     ],
     "extra": {
-      "apiBaseUrl": "http://172.20.10.4:8080"
+      "apiBaseUrl": "https://gateway-service-j9ql.onrender.com"
     }
   }
 }

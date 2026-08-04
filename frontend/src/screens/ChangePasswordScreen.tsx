@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../components/TextInput';
 import Text from '../components/Text';
 import Button from '../components/Button';
+import KeyboardAvoidingScreen from '../components/KeyboardAvoidingScreen';
 import { changePassword } from '../api/auth';
 import { useAuth } from '../auth/AuthContext';
 import { RootStackParamList } from '../navigation/types';
@@ -89,7 +90,8 @@ export default function ChangePasswordScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.subtitle}>Enter your current password, then choose a new one.</Text>
 
       <PasswordField
@@ -133,7 +135,8 @@ export default function ChangePasswordScreen({ navigation }: Props) {
           },
         ]}
       />
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

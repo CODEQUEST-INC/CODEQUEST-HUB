@@ -5,6 +5,7 @@ import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
 import Button from '../../components/Button';
 import DatePicker from '../../components/DatePicker';
+import KeyboardAvoidingScreen from '../../components/KeyboardAvoidingScreen';
 import { getMyGroup, GroupMember } from '../../api/groups';
 import { assignTask, createTask, deleteTask, updateTask } from '../../api/tasks';
 import { useAuth } from '../../auth/AuthContext';
@@ -92,7 +93,8 @@ export default function TaskFormScreen({ route, navigation }: Props) {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.label}>Title</Text>
       <TextInput
         style={styles.input}
@@ -173,7 +175,8 @@ export default function TaskFormScreen({ route, navigation }: Props) {
           style={styles.deleteButton}
         />
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

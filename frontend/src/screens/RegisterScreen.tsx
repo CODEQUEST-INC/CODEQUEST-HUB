@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import TextInput from '../components/TextInput';
 import Text from '../components/Text';
 import Button from '../components/Button';
+import KeyboardAvoidingScreen from '../components/KeyboardAvoidingScreen';
 import { UserRole } from '../api/auth';
 import { Cohort, listCohorts } from '../api/cohorts';
 import { useAuth } from '../auth/AuthContext';
@@ -86,7 +87,8 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={styles.title}>Create account</Text>
 
       <Text style={styles.label}>Full name</Text>
@@ -240,7 +242,8 @@ export default function RegisterScreen({ navigation }: Props) {
       >
         <Text style={styles.link}>Already have an account? Log in</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

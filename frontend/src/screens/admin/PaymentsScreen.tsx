@@ -17,6 +17,7 @@ import Button from '../../components/Button';
 import Card from '../../components/Card';
 import CohortPicker from '../../components/CohortPicker';
 import PaidBadge from '../../components/PaidBadge';
+import KeyboardAvoidingScreen from '../../components/KeyboardAvoidingScreen';
 import { useUserNames, userLabel } from '../../hooks/useUserNames';
 import { Colors, radius, spacing, typography, useTheme } from '../../theme';
 import { confirmAction } from '../../utils/confirm';
@@ -128,7 +129,8 @@ export default function PaymentsScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <KeyboardAvoidingScreen>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <CohortPicker selectedCohortId={cohortId} onSelect={setCohortId} />
 
       {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -231,7 +233,8 @@ export default function PaymentsScreen() {
           {statuses.length === 0 ? <Text style={styles.emptyText}>No groups in this cohort yet.</Text> : null}
         </View>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

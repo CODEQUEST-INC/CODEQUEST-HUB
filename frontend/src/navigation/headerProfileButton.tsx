@@ -4,12 +4,12 @@ import React from 'react';
 import { Pressable } from 'react-native';
 import { useTheme } from '../theme';
 
-// Profile/Settings live on the root stack, but this button is used from
-// both the top-level Tab.Navigator and nested stacks underneath individual
-// tabs (Proposal, Tasks, Admin, Showcase, Supervisor) — those are nested at
-// different depths, so walk all the way up rather than hardcoding a level
-// count that would break depending on which stack renders it.
-function rootNavigation(navigation: NavigationProp<ParamListBase>): NavigationProp<ParamListBase> {
+// Some destinations (Profile/Settings, PdfViewer) live on the root stack, but
+// are reached from both the top-level Tab.Navigator and nested stacks under
+// individual tabs (Proposal, Tasks, Admin, Showcase, Supervisor) — those are
+// nested at different depths, so walk all the way up rather than hardcoding
+// a level count that would break depending on which stack renders it.
+export function rootNavigation(navigation: NavigationProp<ParamListBase>): NavigationProp<ParamListBase> {
   let nav = navigation;
   while (nav.getParent()) {
     nav = nav.getParent()!;
