@@ -22,7 +22,7 @@ estimated — pull one out and flesh it out before starting it.
 
 ## Infrastructure
 
-- [ ] **Backend hosting on Render** — move the backend off local Docker Compose to a hosted Render deployment (8 services + Postgres connection). Needs env/secrets setup on Render and a decision on whether all 8 services stay separate or get consolidated.
+- [ ] **Backend hosting on Render** — move the backend off local Docker Compose to a hosted Render deployment (8 services + Postgres connection, Postgres already externally hosted on Neon so no DB migration needed). Needs env/secrets setup on Render and a decision on whether all 8 services stay separate or get consolidated. (Railway was tried first — hit its free/trial plan's service-count limit; abandoned, project deleted.)
 
 ## Cross-cutting / QA
 
