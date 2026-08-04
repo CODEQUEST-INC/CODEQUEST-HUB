@@ -32,7 +32,14 @@ import java.util.Set;
 @RestController
 public class GatewayController {
 
-    private static final Set<String> EXCLUDED_REQUEST_HEADERS = Set.of("host", "content-length", "connection");
+    // accept-encoding is excluded so it can be forced to "identity" below — RestTemplate's
+    // byte[] converter never transparently decompresses, so a compressed downstream
+    // response would otherwise reach the client as raw gzip bytes with no Content-Encoding
+    // header to tell it that (that header is deliberately not in FORWARDED_RESPONSE_HEADERS,
+    // for the same reason a stale one there previously broke responses — see the allowlist
+    // note above).
+    private static final Set<String> EXCLUDED_REQUEST_HEADERS =
+        Set.of("host", "content-length", "connection", "accept-encoding");
     // Allowlist, not a denylist: each downstream call goes over that service's public
     // URL (Render's free tier can't receive private-network traffic), so the response
     // already carries that service's own edge/platform headers (cf-ray, alt-svc, rndr-id,
@@ -107,6 +114,7 @@ public class GatewayController {
                 Collections.list(request.getHeaders(name)).forEach(value -> headers.add(name, value));
             }
         });
+        headers.set("Accept-Encoding", "identity");
         if (!headers.containsKey(RequestLoggingFilter.REQUEST_ID_HEADER)) {
             Object requestId = request.getAttribute(RequestLoggingFilter.REQUEST_ID_ATTRIBUTE);
             if (requestId != null) {
