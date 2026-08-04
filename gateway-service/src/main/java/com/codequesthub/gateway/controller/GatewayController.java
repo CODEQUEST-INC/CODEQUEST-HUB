@@ -33,7 +33,12 @@ import java.util.Set;
 public class GatewayController {
 
     private static final Set<String> EXCLUDED_REQUEST_HEADERS = Set.of("host", "content-length", "connection");
-    private static final Set<String> EXCLUDED_RESPONSE_HEADERS = Set.of("transfer-encoding", "connection");
+    // content-length/content-encoding are excluded because RestTemplate may transparently
+    // decompress a gzip'd downstream response while leaving those headers describing the
+    // original compressed body — forwarding them verbatim then mismatches the actual bytes
+    // written here, which edge proxies (Render's Cloudflare front door) reject outright.
+    private static final Set<String> EXCLUDED_RESPONSE_HEADERS =
+        Set.of("transfer-encoding", "connection", "content-length", "content-encoding");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final RestTemplate restTemplate;
