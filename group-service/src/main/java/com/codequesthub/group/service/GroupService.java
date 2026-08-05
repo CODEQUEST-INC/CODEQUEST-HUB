@@ -4,16 +4,12 @@ import com.codequesthub.group.dto.*;
 import com.codequesthub.group.entity.*;
 import com.codequesthub.group.repository.*;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,21 +26,16 @@ public class GroupService {
     private final GroupMemberRepository memberRepo;
     private final CohortRepository cohortRepo;
     private final UserViewRepository userViewRepo;
-    private final Path uploadDir;
+    private final R2StorageService storage;
 
     public GroupService(GroupRepository groupRepo, GroupMemberRepository memberRepo,
                          CohortRepository cohortRepo, UserViewRepository userViewRepo,
-                         @Value("${group.upload-dir}") String uploadDir) {
+                         R2StorageService storage) {
         this.groupRepo = groupRepo;
         this.memberRepo = memberRepo;
         this.cohortRepo = cohortRepo;
         this.userViewRepo = userViewRepo;
-        this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
-        try {
-            Files.createDirectories(this.uploadDir);
-        } catch (IOException e) {
-            throw new IllegalStateException("Could not create group upload directory: " + uploadDir, e);
-        }
+        this.storage = storage;
     }
 
     public Group setGroupLeader(UUID groupId, UUID actingUserId, String actingRole, SetGroupLeaderRequest req) {
@@ -245,11 +236,13 @@ public class GroupService {
 
         String oldPhotoPath = group.getPhotoPath();
         String filename = UUID.randomUUID() + extension;
+        byte[] bytes;
         try {
-            Files.write(uploadDir.resolve(filename), file.getBytes());
+            bytes = file.getBytes();
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save photo");
         }
+        storage.store(filename, bytes, file.getContentType());
 
         group.setPhotoPath(filename);
         Group saved = groupRepo.save(group);
@@ -284,23 +277,11 @@ public class GroupService {
     }
 
     public byte[] readPhoto(String filename) {
-        Path path = uploadDir.resolve(filename).normalize();
-        if (!path.startsWith(uploadDir) || !Files.exists(path)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found");
-        }
-        try {
-            return Files.readAllBytes(path);
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not read photo");
-        }
+        return storage.read(filename);
     }
 
     private void deleteFileQuietly(String filename) {
-        try {
-            Files.deleteIfExists(uploadDir.resolve(filename));
-        } catch (IOException ignored) {
-            // best-effort cleanup only
-        }
+        storage.deleteQuietly(filename);
     }
 
     private Map<String, Object> buildGroupResponse(Group group, List<GroupMember> members) {

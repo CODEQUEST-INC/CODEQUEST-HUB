@@ -12,14 +12,12 @@ import com.codequesthub.group.repository.GroupRepository;
 import com.codequesthub.group.repository.UserViewRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,15 +36,13 @@ class GroupServiceTest {
     @Mock private GroupMemberRepository memberRepo;
     @Mock private CohortRepository cohortRepo;
     @Mock private UserViewRepository userViewRepo;
-
-    @TempDir
-    Path uploadDir;
+    @Mock private R2StorageService storage;
 
     // A method, not a field initializer — field initializers run before
     // MockitoExtension injects @Mock fields, so groupRepo/memberRepo would
     // still be null at that point.
     private GroupService groupService() {
-        return new GroupService(groupRepo, memberRepo, cohortRepo, userViewRepo, uploadDir.toString());
+        return new GroupService(groupRepo, memberRepo, cohortRepo, userViewRepo, storage);
     }
 
     private UserView studentWith(String indexNumber) {
@@ -298,12 +295,11 @@ class GroupServiceTest {
     }
 
     @Test
-    void deletePhoto_validMemberWithPhoto_clearsPathAndDeletesFile() throws Exception {
+    void deletePhoto_validMemberWithPhoto_clearsPathAndDeletesFile() {
         UUID groupId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         Group group = groupWith(groupId, UUID.randomUUID());
         group.setPhotoPath("existing.png");
-        java.nio.file.Files.write(uploadDir.resolve("existing.png"), new byte[] { 1, 2, 3 });
 
         when(groupRepo.findById(groupId)).thenReturn(java.util.Optional.of(group));
         when(memberRepo.existsByGroupIdAndUserId(groupId, userId)).thenReturn(true);
@@ -314,7 +310,7 @@ class GroupServiceTest {
 
         assertThat(result.get("photoUrl")).isNull();
         assertThat(group.getPhotoPath()).isNull();
-        assertThat(java.nio.file.Files.exists(uploadDir.resolve("existing.png"))).isFalse();
+        verify(storage).deleteQuietly("existing.png");
     }
 
     @Test

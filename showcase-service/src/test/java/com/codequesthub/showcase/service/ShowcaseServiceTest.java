@@ -16,7 +16,6 @@ import com.codequesthub.showcase.repository.ShowcaseEntryRepository;
 import com.codequesthub.showcase.repository.ShowcasePhotoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
@@ -24,7 +23,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,13 +42,11 @@ class ShowcaseServiceTest {
     @Mock private CohortViewRepository cohortViewRepo;
     @Mock private JudgingCriterionViewRepository criterionViewRepo;
     @Mock private ScorecardViewRepository scorecardViewRepo;
-
-    @TempDir
-    Path uploadDir;
+    @Mock private R2StorageService storage;
 
     private ShowcaseService service() {
         return new ShowcaseService(entryRepo, photoRepo, groupViewRepo, memberRepo, proposalViewRepo,
-            cohortViewRepo, criterionViewRepo, scorecardViewRepo, uploadDir.toString());
+            cohortViewRepo, criterionViewRepo, scorecardViewRepo, storage);
     }
 
     private ProposalView proposalWith(UUID groupId, ProposalStatus status) {

@@ -4,16 +4,12 @@ import com.codequesthub.project.dto.*;
 import com.codequesthub.project.entity.*;
 import com.codequesthub.project.repository.*;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
 @Service
@@ -23,23 +19,18 @@ public class ProposalService {
     private final ProposalVersionRepository versionRepo;
     private final GroupMemberRepository memberRepo;
     private final GroupViewRepository groupViewRepo;
-    private final Path uploadDir;
+    private final R2StorageService storage;
 
     public ProposalService(ProposalRepository proposalRepo,
                            ProposalVersionRepository versionRepo,
                            GroupMemberRepository memberRepo,
                            GroupViewRepository groupViewRepo,
-                           @Value("${project.upload-dir}") String uploadDir) {
+                           R2StorageService storage) {
         this.proposalRepo = proposalRepo;
         this.versionRepo = versionRepo;
         this.memberRepo = memberRepo;
         this.groupViewRepo = groupViewRepo;
-        this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
-        try {
-            Files.createDirectories(this.uploadDir);
-        } catch (IOException e) {
-            throw new IllegalStateException("Could not create proposal upload directory: " + uploadDir, e);
-        }
+        this.storage = storage;
     }
 
     @Transactional
@@ -239,32 +230,22 @@ public class ProposalService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Attachment must be a PDF file");
         }
         String filename = UUID.randomUUID() + ".pdf";
+        byte[] bytes;
         try {
-            Files.write(uploadDir.resolve(filename), pdf.getBytes());
+            bytes = pdf.getBytes();
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save PDF attachment");
         }
+        storage.store(filename, bytes, "application/pdf");
         return filename;
     }
 
     public byte[] readPdf(String filename) {
-        Path path = uploadDir.resolve(filename).normalize();
-        if (!path.startsWith(uploadDir) || !Files.exists(path)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "PDF not found");
-        }
-        try {
-            return Files.readAllBytes(path);
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not read PDF");
-        }
+        return storage.read(filename);
     }
 
     private void deleteFileQuietly(String filename) {
-        try {
-            Files.deleteIfExists(uploadDir.resolve(filename));
-        } catch (IOException ignored) {
-            // best-effort cleanup only
-        }
+        storage.deleteQuietly(filename);
     }
 
     // Helper: persist a ProposalVersion record
