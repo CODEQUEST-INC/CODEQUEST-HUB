@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import * as authApi from '../api/auth';
+import { warmUpBackend } from '../utils/warmup';
 import { tokenStorage } from './tokenStorage';
 
 type Status = 'loading' | 'signedIn' | 'signedOut';
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
+    warmUpBackend();
     (async () => {
       try {
         const storedToken = await tokenStorage.get();
