@@ -28,7 +28,22 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   });
 
   const text = await res.text();
-  const json = text ? JSON.parse(text) : undefined;
+  let json: any;
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      // Not our app responding at all — most often Cloudflare/Render's own
+      // HTML error page during a cold start or outage (a bare `<` is the
+      // classic signature), not a JSON error from our own API.
+      throw new ApiError(
+        res.status,
+        res.ok
+          ? 'Unexpected response from the server. Please try again.'
+          : 'The service is waking up or temporarily unavailable — please try again in a moment.'
+      );
+    }
+  }
 
   if (!res.ok) {
     const message = json?.message ?? json?.error ?? `Request failed with status ${res.status}`;

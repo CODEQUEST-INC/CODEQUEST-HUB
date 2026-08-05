@@ -1,5 +1,6 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as Linking from 'expo-linking';
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
@@ -15,6 +16,24 @@ import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Only "reset-password" is a real deep link target (from the forgot-password
+// email) — everything else here is reachable in-app only. Login/Register/
+// ForgotPassword live on AuthStack, a separate navigator only mounted while
+// signed out; this config is shared across both possible trees since only
+// one is ever mounted at a time; React Navigation just won't find a match if
+// the wrong tree is active for a given path (e.g. following the link while
+// already signed in — an edge case not worth handling here).
+const linking: LinkingOptions<ReactNavigation.RootParamList> = {
+  prefixes: [Linking.createURL('/')],
+  config: {
+    screens: {
+      Login: 'login',
+      Register: 'register',
+      ForgotPassword: 'reset-password',
+    },
+  },
+};
+
 export default function RootNavigator() {
   const { status } = useAuth();
   const { colors } = useTheme();
@@ -28,7 +47,7 @@ export default function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {status === 'signedIn' ? (
         <Stack.Navigator
           screenOptions={{ headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text }}

@@ -24,15 +24,21 @@ public class LoginRateLimiter {
     private final Map<String, Deque<Instant>> attemptsByEmail = new ConcurrentHashMap<>();
 
     public void checkAllowed(String email) {
-        Deque<Instant> attempts = attemptsByEmail.computeIfAbsent(normalize(email), k -> new ConcurrentLinkedDeque<>());
+        checkAllowed(email, "Too many login attempts for this account. Try again in a few minutes.");
+    }
+
+    // Also reused for reset-password code attempts (keyed with a "reset:"
+    // prefix so the two don't share a bucket) — a custom message avoids
+    // surfacing login-specific wording for a different action.
+    public void checkAllowed(String key, String message) {
+        Deque<Instant> attempts = attemptsByEmail.computeIfAbsent(normalize(key), k -> new ConcurrentLinkedDeque<>());
         Instant cutoff = Instant.now().minusMillis(WINDOW_MILLIS);
         synchronized (attempts) {
             while (!attempts.isEmpty() && attempts.peekFirst().isBefore(cutoff)) {
                 attempts.pollFirst();
             }
             if (attempts.size() >= MAX_ATTEMPTS) {
-                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Too many login attempts for this account. Try again in a few minutes.");
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, message);
             }
         }
     }

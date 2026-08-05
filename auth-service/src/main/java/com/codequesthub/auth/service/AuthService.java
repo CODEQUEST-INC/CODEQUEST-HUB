@@ -256,21 +256,31 @@ public class AuthService {
     // be used to enumerate registered emails.
     public void forgotPassword(String email) {
         userRepo.findByEmail(email).ifPresent(user -> {
-            String token = generateSecureToken();
-            user.setResetToken(token);
-            user.setResetTokenExpiresAt(OffsetDateTime.now().plusHours(1));
+            String code = generateResetCode();
+            user.setResetToken(code);
+            user.setResetTokenExpiresAt(OffsetDateTime.now().plusMinutes(15));
             userRepo.save(user);
-            emailService.sendPasswordReset(user.getEmail(), token);
+            emailService.sendPasswordReset(user.getEmail(), code);
         });
     }
 
-    public void resetPassword(String token, String newPassword) {
-        User user = userRepo.findByResetToken(token)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset code"));
+    // Looked up by email+code together (not code alone) so a guess only ever
+    // matches one specific account, and so attempts can be rate-limited per
+    // email — a bare code-only lookup would let an attacker try one guess
+    // against every pending reset at once. Same generic "invalid or expired"
+    // error whether the email doesn't exist, the code is wrong, or it expired,
+    // for the same anti-enumeration reason as forgotPassword.
+    public void resetPassword(String email, String code, String newPassword) {
+        String rateLimitKey = "reset:" + email;
+        rateLimiter.checkAllowed(rateLimitKey, "Too many reset attempts. Request a new code and try again in a few minutes.");
 
-        if (user.getResetTokenExpiresAt() == null || user.getResetTokenExpiresAt().isBefore(OffsetDateTime.now())) {
+        User user = userRepo.findByEmail(email).orElse(null);
+        if (user == null || user.getResetToken() == null || !user.getResetToken().equals(code)
+            || user.getResetTokenExpiresAt() == null || user.getResetTokenExpiresAt().isBefore(OffsetDateTime.now())) {
+            rateLimiter.recordFailedAttempt(rateLimitKey);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset code");
         }
+        rateLimiter.recordSuccess(rateLimitKey);
 
         user.setPasswordHash(encoder.encode(newPassword));
         user.setResetToken(null);
@@ -320,5 +330,12 @@ public class AuthService {
             sb.append(String.format("%02x", b));
         }
         return sb.toString();
+    }
+
+    // Short enough to type by hand or read off an email, unlike
+    // generateSecureToken()'s 48-hex-char token — paired with per-email rate
+    // limiting in resetPassword() since 6 digits is far less entropy.
+    private String generateResetCode() {
+        return String.format("%06d", random.nextInt(1_000_000));
     }
 }

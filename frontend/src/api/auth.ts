@@ -61,8 +61,8 @@ export function forgotPassword(email: string): Promise<{ message: string }> {
   return request<{ message: string }>('/api/auth/forgot-password', { method: 'POST', body: { email } });
 }
 
-export function resetPassword(token: string, newPassword: string): Promise<void> {
-  return request<void>('/api/auth/reset-password', { method: 'POST', body: { token, newPassword } });
+export function resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+  return request<void>('/api/auth/reset-password', { method: 'POST', body: { email, code, newPassword } });
 }
 
 export function verifyEmail(code: string, token: string): Promise<void> {

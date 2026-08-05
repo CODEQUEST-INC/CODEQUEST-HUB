@@ -20,16 +20,21 @@ const glow = (colors: Colors) => ({
   elevation: 8,
 });
 
-export default function ForgotPasswordScreen({ navigation }: Props) {
+export default function ForgotPasswordScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
 
-  const [step, setStep] = useState<'request' | 'reset'>('request');
-  const [email, setEmail] = useState('');
+  // Tapping the deep link from the reset email lands here with email+code
+  // already known — skip straight to step 2 instead of asking for the email
+  // again.
+  const deepLinked = !!(route.params?.email && route.params?.code);
+
+  const [step, setStep] = useState<'request' | 'reset'>(deepLinked ? 'reset' : 'request');
+  const [email, setEmail] = useState(route.params?.email ?? '');
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
 
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(route.params?.code ?? '');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [resetSubmitting, setResetSubmitting] = useState(false);
@@ -57,7 +62,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     }
     setResetSubmitting(true);
     try {
-      await resetPassword(code.trim(), newPassword);
+      await resetPassword(email.trim(), code.trim(), newPassword);
       setResetDone(true);
     } catch (e) {
       setResetError(e instanceof Error ? e.message : 'Reset failed');

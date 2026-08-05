@@ -7,6 +7,9 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 // Sends through Brevo's SMTP relay via the JavaMailSender autoconfigured
 // from spring.mail.* in application.properties (credentials come from
 // SMTP_USERNAME/SMTP_PASSWORD). Mirrors payment-service's EmailService —
@@ -24,12 +27,19 @@ public class EmailService {
         this.from = from;
     }
 
-    public void sendPasswordReset(String toEmail, String resetToken) {
+    public void sendPasswordReset(String toEmail, String resetCode) {
+        String encodedEmail = URLEncoder.encode(toEmail, StandardCharsets.UTF_8);
+        String deepLink = "codequesthub://reset-password?email=" + encodedEmail + "&code=" + resetCode;
+
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
         message.setTo(toEmail);
         message.setSubject("Reset your password");
-        message.setText("Your reset code is: " + resetToken);
+        message.setText(
+            "Tap to reset your password on your device:\n" + deepLink + "\n\n"
+            + "Or enter this code in the app manually: " + resetCode + "\n\n"
+            + "This code expires in 15 minutes. If you didn't request this, you can ignore this email."
+        );
         try {
             mailSender.send(message);
         } catch (Exception e) {

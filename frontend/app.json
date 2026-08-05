@@ -4,6 +4,7 @@
     "slug": "codequest-hub",
     "owner": "brobbeydev",
     "version": "1.0.0",
+    "scheme": "codequesthub",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

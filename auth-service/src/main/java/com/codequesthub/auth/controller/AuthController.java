@@ -145,7 +145,7 @@ public class AuthController {
     // public — the reset code itself is the credential here
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
-        authService.resetPassword(req.getToken(), req.getNewPassword());
+        authService.resetPassword(req.getEmail(), req.getCode(), req.getNewPassword());
         return ResponseEntity.noContent().build();
     }
 

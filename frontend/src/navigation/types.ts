@@ -5,7 +5,9 @@ import { TaskResponse } from '../api/tasks';
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
-  ForgotPassword: undefined;
+  // email+code are set when opened via the reset-password deep link from the
+  // reset email — undefined for the normal in-app "Forgot password?" tap.
+  ForgotPassword: { email?: string; code?: string } | undefined;
 };
 
 export type RootStackParamList = {
