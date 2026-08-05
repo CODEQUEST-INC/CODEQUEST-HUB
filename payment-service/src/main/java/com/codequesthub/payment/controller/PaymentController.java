@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
@@ -73,7 +74,10 @@ public class PaymentController {
     public ResponseEntity<?> myStatus(@PathVariable UUID groupId, Authentication auth) {
         UUID userId = UUID.fromString((String) auth.getPrincipal());
         var status = paymentService.getMyPaymentStatus(groupId, userId).orElse(null);
-        return ResponseEntity.ok(Map.of("data", status));
+        // Map.of rejects null values outright (throws NPE) — status is
+        // legitimately null for a student who hasn't paid yet, which is the
+        // common case this endpoint exists to report.
+        return ResponseEntity.ok(Collections.singletonMap("data", status));
     }
 
     // the calling student's full payment attempt history for this group, newest first
