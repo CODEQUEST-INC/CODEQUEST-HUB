@@ -33,6 +33,8 @@ export default function RegisterScreen({ navigation }: Props) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<UserRole>('student');
   const [indexNumber, setIndexNumber] = useState('');
   const [studentId, setStudentId] = useState('');
@@ -55,6 +57,10 @@ export default function RegisterScreen({ navigation }: Props) {
   }, []);
 
   const onSubmit = async () => {
+    if (password !== confirmPassword) {
+      setError("Passwords don't match.");
+      return;
+    }
     if (role === 'student' && !indexNumber.trim()) {
       setError('Index number is required for students.');
       return;
@@ -120,17 +126,42 @@ export default function RegisterScreen({ navigation }: Props) {
         onBlur={() => setFocusedField(null)}
       />
       <Text style={styles.label}>Password</Text>
+      <View style={[styles.input, styles.passwordRow, focusedField === 'password' && styles.inputFocused]}>
+        <TextInput
+          style={styles.passwordInput}
+          placeholder="Min 8 characters"
+          placeholderTextColor={colors.textMuted}
+          secureTextEntry={!showPassword}
+          textContentType="newPassword"
+          autoComplete="password-new"
+          accessibilityLabel="Password"
+          value={password}
+          onChangeText={setPassword}
+          onFocus={() => setFocusedField('password')}
+          onBlur={() => setFocusedField(null)}
+        />
+        <Pressable
+          onPress={() => setShowPassword((v) => !v)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+        >
+          <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color={colors.textMuted} />
+        </Pressable>
+      </View>
+
+      <Text style={styles.label}>Confirm password</Text>
       <TextInput
-        style={[styles.input, focusedField === 'password' && styles.inputFocused]}
-        placeholder="Min 8 characters"
+        style={[styles.input, focusedField === 'confirmPassword' && styles.inputFocused]}
+        placeholder="Re-enter your password"
         placeholderTextColor={colors.textMuted}
-        secureTextEntry
+        secureTextEntry={!showPassword}
         textContentType="newPassword"
         autoComplete="password-new"
-        accessibilityLabel="Password"
-        value={password}
-        onChangeText={setPassword}
-        onFocus={() => setFocusedField('password')}
+        accessibilityLabel="Confirm password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        onFocus={() => setFocusedField('confirmPassword')}
         onBlur={() => setFocusedField(null)}
       />
       {password.length > 0 ? (
@@ -276,6 +307,8 @@ function createStyles(colors: Colors) {
       backgroundColor: colors.surface,
     },
     inputFocused: { borderColor: colors.primary, borderWidth: 2 },
+    passwordRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+    passwordInput: { flex: 1, fontSize: 16, padding: 0 },
     strengthRow: { flexDirection: 'row', gap: spacing.xs, marginTop: -spacing.xs },
     strengthBar: { flex: 1, height: 5, borderRadius: radius.pill, backgroundColor: colors.border },
     strengthWeak: { backgroundColor: colors.danger },
